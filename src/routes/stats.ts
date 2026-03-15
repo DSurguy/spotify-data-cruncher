@@ -1,5 +1,17 @@
 import type { Database } from "bun:sqlite";
 
+export type TimelineGranularity = "week" | "month" | "year";
+
+export interface TimelinePoint {
+  period: string;
+  total_ms_played: number;
+}
+
+export interface GetTimelineResponse {
+  points: TimelinePoint[];
+  granularity: TimelineGranularity;
+}
+
 export interface TopTrack {
   track_key: string;
   track_name: string;
@@ -193,6 +205,49 @@ export function handleGetTopArtists(db: Database, req: Request): Response {
   `).all(...params);
 
   const body: GetTopArtistsResponse = { artists: rows };
+  return Response.json(body);
+}
+
+const GRANULARITY_FORMATS: Record<TimelineGranularity, string> = {
+  week: "%Y-W%W",
+  month: "%Y-%m",
+  year: "%Y",
+};
+
+export function handleGetTimeline(db: Database, req: Request): Response {
+  const url = new URL(req.url);
+  const p = url.searchParams;
+
+  const granularity = (p.get("granularity") ?? "month") as TimelineGranularity;
+  if (!GRANULARITY_FORMATS[granularity]) {
+    return new Response("invalid granularity, use: week, month, year", { status: 400 });
+  }
+
+  const conditions: string[] = ["content_type = 'track'"];
+  const params: (string | number)[] = [];
+
+  const datasetId = p.get("dataset_id");
+  const from = p.get("from");
+  const to = p.get("to");
+  const year = p.get("year");
+
+  if (datasetId) { conditions.push("dataset_id = ?");              params.push(Number(datasetId)); }
+  if (from)      { conditions.push("ts >= ?");                     params.push(from); }
+  if (to)        { conditions.push("ts <= ?");                     params.push(to); }
+  if (year)      { conditions.push("strftime('%Y', ts) = ?");      params.push(year); }
+
+  const where = conditions.map(c => `(${c})`).join(" AND ");
+  const fmt = GRANULARITY_FORMATS[granularity];
+
+  const rows = db.query<TimelinePoint, typeof params>(`
+    SELECT strftime('${fmt}', ts) AS period, SUM(ms_played) AS total_ms_played
+    FROM plays
+    WHERE ${where}
+    GROUP BY period
+    ORDER BY period ASC
+  `).all(...params);
+
+  const body: GetTimelineResponse = { points: rows, granularity };
   return Response.json(body);
 }
 

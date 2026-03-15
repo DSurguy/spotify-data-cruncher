@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type {
   SummaryStats, GetSummaryResponse,
   TopArtist, GetTopArtistsResponse,
   TopAlbum, GetTopAlbumsResponse,
   TopTrack, GetTopTracksResponse,
+  TimelinePoint, TimelineGranularity, GetTimelineResponse,
 } from "@/routes/stats";
 
 function formatDuration(ms: number): string {
@@ -40,11 +43,55 @@ function StatCard({ title, value, sub }: StatCardProps) {
   );
 }
 
+function formatPeriodLabel(period: string, granularity: TimelineGranularity): string {
+  if (granularity === "year") return period;
+  if (granularity === "month") {
+    const [year, month] = period.split("-");
+    const d = new Date(Number(year), Number(month) - 1, 1);
+    return d.toLocaleDateString(undefined, { month: "short", year: "2-digit" });
+  }
+  // week: "2024-W03" -> "W3 '24"
+  const [yearPart, weekPart] = period.split("-W");
+  return `W${parseInt(weekPart)} '${yearPart.slice(2)}`;
+}
+
+function TimelineChart({ points, granularity }: { points: TimelinePoint[]; granularity: TimelineGranularity }) {
+  if (points.length === 0) {
+    return <p className="text-center text-muted-foreground text-sm py-10">No data</p>;
+  }
+  const maxMs = Math.max(...points.map(p => p.total_ms_played));
+  return (
+    <div className="space-y-1">
+      <div className="h-32 flex items-end gap-px" aria-label="Listening timeline chart">
+        {points.map(p => {
+          const pct = maxMs > 0 ? (p.total_ms_played / maxMs) * 100 : 0;
+          const mins = Math.round(p.total_ms_played / 60_000);
+          return (
+            <div
+              key={p.period}
+              className="flex-1 bg-primary rounded-t-sm min-h-px"
+              style={{ height: `${pct}%`, opacity: 0.75 }}
+              title={`${formatPeriodLabel(p.period, granularity)}: ${mins} min`}
+            />
+          );
+        })}
+      </div>
+      <div className="flex justify-between text-xs text-muted-foreground px-px">
+        <span>{formatPeriodLabel(points[0].period, granularity)}</span>
+        <span>{formatPeriodLabel(points[points.length - 1].period, granularity)}</span>
+      </div>
+    </div>
+  );
+}
+
 export function DashboardPage() {
   const [stats, setStats] = useState<SummaryStats | null>(null);
   const [topArtists, setTopArtists] = useState<TopArtist[]>([]);
   const [topAlbums, setTopAlbums] = useState<TopAlbum[]>([]);
   const [topTracks, setTopTracks] = useState<TopTrack[]>([]);
+  const [timeline, setTimeline] = useState<TimelinePoint[]>([]);
+  const [tlGranularity, setTlGranularity] = useState<TimelineGranularity>("month");
+  const [tlYear, setTlYear] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -62,15 +109,27 @@ export function DashboardPage() {
     });
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams({ granularity: tlGranularity });
+    if (tlYear) params.set("year", tlYear);
+    fetch(`/api/stats/timeline?${params}`)
+      .then(r => r.json() as Promise<GetTimelineResponse>)
+      .then(body => setTimeline(body.points));
+  }, [tlGranularity, tlYear]);
+
   if (loading) {
     return <p className="text-muted-foreground">Loading…</p>;
   }
 
   if (!stats) return null;
 
-  const dateRange = stats.first_played
-    ? `${formatDate(stats.first_played)} – ${formatDate(stats.last_played)}`
-    : "No data";
+  // Derive available years from data range for the year filter
+  const availableYears: string[] = [];
+  if (stats.first_played && stats.last_played) {
+    const firstYear = new Date(stats.first_played).getFullYear();
+    const lastYear = new Date(stats.last_played).getFullYear();
+    for (let y = lastYear; y >= firstYear; y--) availableYears.push(String(y));
+  }
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -103,6 +162,50 @@ export function DashboardPage() {
           sub={`through ${formatDate(stats.last_played)}`}
         />
       </div>
+
+      {/* Timeline chart */}
+      <Card className="mb-6">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <CardTitle className="text-base">Listening Timeline</CardTitle>
+            <div className="flex items-center gap-2">
+              {/* Year filter */}
+              {availableYears.length > 1 && (
+                <Select value={tlYear || "all"} onValueChange={v => setTlYear(v === "all" ? "" : v)}>
+                  <SelectTrigger className="h-7 text-xs w-28" aria-label="Filter by year">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All time</SelectItem>
+                    {availableYears.map(y => (
+                      <SelectItem key={y} value={y}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {/* Granularity toggle */}
+              <div className="flex rounded-md border overflow-hidden text-xs" role="group" aria-label="Granularity">
+                {(["week", "month", "year"] as TimelineGranularity[]).map(g => (
+                  <button
+                    key={g}
+                    onClick={() => setTlGranularity(g)}
+                    className={`px-2 py-1 capitalize ${
+                      tlGranularity === g
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted"
+                    }`}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <TimelineChart points={timeline} granularity={tlGranularity} />
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Top Artists */}

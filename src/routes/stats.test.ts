@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { Database } from "bun:sqlite";
 import { runMigrations } from "../db/migrations";
-import { handleGetSummary, handleGetTopTracks, handleGetTopAlbums, handleGetTopArtists } from "./stats";
+import { handleGetSummary, handleGetTopTracks, handleGetTopAlbums, handleGetTopArtists, handleGetTimeline } from "./stats";
 
 function makeReq(path: string) {
   return new Request(`http://localhost${path}`);
@@ -248,6 +248,92 @@ describe("handleGetTopArtists", () => {
     const names = body.artists.map((a: any) => a.artist_name);
     expect(names).toContain("Artist Y");
     expect(names).toContain("Artist Z");
+  });
+});
+
+describe("handleGetTimeline", () => {
+  let db: Database;
+
+  beforeEach(() => {
+    db = new Database(":memory:");
+    db.run("PRAGMA foreign_keys=ON");
+    runMigrations(db);
+    db.run(`INSERT INTO datasets (name, created_at) VALUES ('Test', '2024-01-01')`);
+    db.run(`INSERT INTO plays
+      (dataset_id, ts, ms_played, content_type, track_name, artist_name, album_name, spotify_track_uri)
+      VALUES
+      (1, '2024-01-15T10:00:00Z', 200000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa'),
+      (1, '2024-01-20T10:00:00Z', 180000, 'track', 'Track B', 'Artist X', 'Album 1', 'spotify:track:bbb'),
+      (1, '2024-02-10T10:00:00Z', 150000, 'track', 'Track C', 'Artist Y', 'Album 2', 'spotify:track:ccc'),
+      (1, '2025-03-05T10:00:00Z', 300000, 'track', 'Track D', 'Artist Z', 'Album 3', 'spotify:track:ddd')`);
+    // podcast — must be excluded
+    db.run(`INSERT INTO plays (dataset_id, ts, ms_played, content_type, episode_name, episode_show_name, spotify_episode_uri)
+      VALUES (1, '2024-01-25T08:00:00Z', 9999999, 'episode', 'Ep 1', 'Show Z', 'spotify:episode:ep1')`);
+  });
+
+  afterEach(() => db.close());
+
+  it("returns monthly periods by default sorted ASC", async () => {
+    const res = handleGetTimeline(db, makeReq("/api/stats/timeline"));
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.granularity).toBe("month");
+    expect(body.points.map((p: any) => p.period)).toEqual(["2024-01", "2024-02", "2025-03"]);
+  });
+
+  it("aggregates ms_played correctly per period", async () => {
+    const res = handleGetTimeline(db, makeReq("/api/stats/timeline"));
+    const body = await res.json();
+    const jan = body.points.find((p: any) => p.period === "2024-01");
+    expect(jan.total_ms_played).toBe(380000);  // 200000 + 180000 (podcast excluded)
+    const feb = body.points.find((p: any) => p.period === "2024-02");
+    expect(feb.total_ms_played).toBe(150000);
+  });
+
+  it("granularity=week groups by week", async () => {
+    const res = handleGetTimeline(db, makeReq("/api/stats/timeline?granularity=week"));
+    const body = await res.json();
+    expect(body.granularity).toBe("week");
+    body.points.forEach((p: any) => expect(p.period).toMatch(/^\d{4}-W\d{2}$/));
+    expect(body.points.length).toBeGreaterThan(0);
+  });
+
+  it("granularity=year groups by year", async () => {
+    const res = handleGetTimeline(db, makeReq("/api/stats/timeline?granularity=year"));
+    const body = await res.json();
+    expect(body.granularity).toBe("year");
+    expect(body.points.map((p: any) => p.period)).toEqual(["2024", "2025"]);
+    const p2024 = body.points.find((p: any) => p.period === "2024");
+    expect(p2024.total_ms_played).toBe(530000);
+  });
+
+  it("filters by year param", async () => {
+    const res = handleGetTimeline(db, makeReq("/api/stats/timeline?year=2024"));
+    const body = await res.json();
+    expect(body.points.every((p: any) => p.period.startsWith("2024"))).toBe(true);
+    expect(body.points.map((p: any) => p.period)).toEqual(["2024-01", "2024-02"]);
+  });
+
+  it("filters by dataset_id", async () => {
+    db.run(`INSERT INTO datasets (name, created_at) VALUES ('Other', '2025-01-01')`);
+    db.run(`INSERT INTO plays (dataset_id, ts, ms_played, content_type, track_name, artist_name, album_name, spotify_track_uri)
+      VALUES (2, '2025-01-10T10:00:00Z', 500000, 'track', 'X', 'Z', 'AlbumZ', 'spotify:track:zzz')`);
+    const res = handleGetTimeline(db, makeReq("/api/stats/timeline?dataset_id=2"));
+    const body = await res.json();
+    expect(body.points).toHaveLength(1);
+    expect(body.points[0].period).toBe("2025-01");
+  });
+
+  it("returns 400 for invalid granularity", async () => {
+    const res = handleGetTimeline(db, makeReq("/api/stats/timeline?granularity=decade"));
+    expect(res.status).toBe(400);
+  });
+
+  it("returns empty array when no data", async () => {
+    db.run("DELETE FROM plays");
+    const res = handleGetTimeline(db, makeReq("/api/stats/timeline"));
+    const body = await res.json();
+    expect(body.points).toHaveLength(0);
   });
 });
 

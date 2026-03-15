@@ -1,7 +1,7 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { DashboardPage } from "./DashboardPage";
-import type { GetSummaryResponse, GetTopArtistsResponse, GetTopAlbumsResponse, GetTopTracksResponse } from "@/routes/stats";
+import type { GetSummaryResponse, GetTopArtistsResponse, GetTopAlbumsResponse, GetTopTracksResponse, GetTimelineResponse } from "@/routes/stats";
 
 const mockSummary: GetSummaryResponse = {
   summary: {
@@ -36,6 +36,15 @@ const mockTopTracks: GetTopTracksResponse = {
   ],
 };
 
+const mockTimeline: GetTimelineResponse = {
+  granularity: "month",
+  points: [
+    { period: "2024-01", total_ms_played: 3_600_000 },
+    { period: "2024-02", total_ms_played: 7_200_000 },
+    { period: "2024-03", total_ms_played: 1_800_000 },
+  ],
+};
+
 function makeFetchMock() {
   return vi.fn().mockImplementation((url: string) => {
     if (url.includes("top-artists")) {
@@ -46,6 +55,9 @@ function makeFetchMock() {
     }
     if (url.includes("top-tracks")) {
       return Promise.resolve({ ok: true, json: async () => mockTopTracks } as any);
+    }
+    if (url.includes("timeline")) {
+      return Promise.resolve({ ok: true, json: async () => mockTimeline } as any);
     }
     return Promise.resolve({ ok: true, json: async () => mockSummary } as any);
   });
@@ -107,5 +119,38 @@ describe("DashboardPage", () => {
   it("shows Loading state initially", () => {
     render(<DashboardPage />);
     expect(screen.getByText("Loading…")).toBeInTheDocument();
+  });
+
+  it("renders Listening Timeline section", async () => {
+    render(<DashboardPage />);
+    await waitFor(() => screen.getByText("Listening Timeline"));
+    expect(screen.getByLabelText("Listening timeline chart")).toBeInTheDocument();
+  });
+
+  it("renders granularity toggle buttons", async () => {
+    render(<DashboardPage />);
+    await waitFor(() => screen.getByRole("group", { name: "Granularity" }));
+    expect(screen.getByRole("button", { name: "week" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "month" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "year" })).toBeInTheDocument();
+  });
+
+  it("refetches timeline when granularity changes", async () => {
+    const fetchMock = makeFetchMock();
+    globalThis.fetch = fetchMock;
+    render(<DashboardPage />);
+    await waitFor(() => screen.getByRole("button", { name: "week" }));
+    fireEvent.click(screen.getByRole("button", { name: "week" }));
+    await waitFor(() => {
+      const calls = fetchMock.mock.calls.map((c: any[]) => c[0] as string);
+      const timelineCalls = calls.filter(u => u.includes("timeline"));
+      expect(timelineCalls.some(u => u.includes("granularity=week"))).toBe(true);
+    });
+  });
+
+  it("renders year filter select when data spans multiple years", async () => {
+    render(<DashboardPage />);
+    await waitFor(() => screen.getByLabelText("Filter by year"));
+    expect(screen.getByLabelText("Filter by year")).toBeInTheDocument();
   });
 });
