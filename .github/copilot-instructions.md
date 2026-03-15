@@ -44,7 +44,8 @@ For every unit of work, follow this sequence without deviation:
 2. Run the tests and confirm they pass.
 3. `git add` only the files for this unit.
 4. `git commit` with a clear message.
-5. Only then begin the next unit.
+5. `git push`.
+6. Only then begin the next unit.
 
 ## Temporary Files
 
