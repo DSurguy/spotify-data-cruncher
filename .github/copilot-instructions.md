@@ -48,7 +48,8 @@ For every unit of work, follow this sequence without deviation:
 
 ## Temporary Files
 
-Always use the local `./tmp/` directory (already in `.gitignore`) for any temporary files — test artifacts, scratch output, downloaded files, shell redirects, etc. **Never use the system `/tmp/`.**
+- **Development tasks** (test artifacts, scratch output, shell redirects, downloaded files): use the local `./tmp/` directory (already in `.gitignore`). Never use `/tmp/` for these.
+- **Application runtime** (e.g. extracting an upload, staging a file before processing): use the system `/tmp/` directory as normal.
 
 ## Project Conventions
 

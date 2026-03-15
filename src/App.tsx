@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { DatasetsPage } from "./pages/DatasetsPage";
+import { AlbumsPage } from "./pages/AlbumsPage";
 import "./index.css";
 
-type Page = "datasets";
+type Page = "datasets" | "albums";
 
 export function App() {
   const [page, setPage] = useState<Page>("datasets");
@@ -16,11 +17,13 @@ export function App() {
             Spotify Cruncher
           </h1>
         </div>
+        <NavItem label="Albums" active={page === "albums"} onClick={() => setPage("albums")} />
         <NavItem label="Datasets" active={page === "datasets"} onClick={() => setPage("datasets")} />
       </nav>
 
       {/* Main content */}
       <main className="flex-1 overflow-y-auto p-6">
+        {page === "albums" && <AlbumsPage onAlbumSelect={() => {}} />}
         {page === "datasets" && <DatasetsPage />}
       </main>
     </div>
