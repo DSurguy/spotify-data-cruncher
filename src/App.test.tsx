@@ -12,8 +12,8 @@ beforeEach(() => {
       // datasets
       datasets: [],
       // albums
-      albums: [], total: 0, page: 1, page_size: 50,
-    }),
+      albums: [], total: 0, page: 1, page_size: 50,      // plays
+      plays: [], page_size: 100,    }),
   } as any);
 });
 
@@ -24,6 +24,7 @@ describe("App", () => {
     expect(screen.getByText("Spotify Cruncher")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Dashboard" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Albums" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "History" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Datasets" })).toBeInTheDocument();
   });
 

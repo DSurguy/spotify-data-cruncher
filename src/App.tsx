@@ -3,9 +3,10 @@ import { DatasetsPage } from "./pages/DatasetsPage";
 import { AlbumsPage } from "./pages/AlbumsPage";
 import { AlbumDetail } from "./pages/AlbumDetail";
 import { DashboardPage } from "./pages/DashboardPage";
+import { HistoryPage } from "./pages/HistoryPage";
 import "./index.css";
 
-type Page = "dashboard" | "datasets" | "albums";
+type Page = "dashboard" | "albums" | "history" | "datasets";
 
 export function App() {
   const [page, setPage] = useState<Page>("dashboard");
@@ -27,6 +28,7 @@ export function App() {
         </div>
         <NavItem label="Dashboard" active={page === "dashboard"} onClick={() => navigateTo("dashboard")} />
         <NavItem label="Albums" active={page === "albums"} onClick={() => navigateTo("albums")} />
+        <NavItem label="History" active={page === "history"} onClick={() => navigateTo("history")} />
         <NavItem label="Datasets" active={page === "datasets"} onClick={() => navigateTo("datasets")} />
       </nav>
 
@@ -39,6 +41,7 @@ export function App() {
         {page === "albums" && selectedAlbumKey !== null && (
           <AlbumDetail albumKey={selectedAlbumKey} onClose={() => setSelectedAlbumKey(null)} />
         )}
+        {page === "history" && <HistoryPage />}
         {page === "datasets" && <DatasetsPage />}
       </main>
     </div>
