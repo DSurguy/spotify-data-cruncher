@@ -10,7 +10,7 @@ import {
 import { handleImport } from "./routes/import-handler";
 import { handleGetAlbums, handleGetAlbum } from "./routes/albums";
 import { handleGetOverrides, handlePutOverrides, handleDeleteOverride } from "./routes/overrides";
-import { handleGetSummary } from "./routes/stats";
+import { handleGetSummary, handleGetTopTracks, handleGetTopAlbums, handleGetTopArtists } from "./routes/stats";
 import { handleGetPlays } from "./routes/plays";
 import { handleGetArtists, handleGetArtist } from "./routes/artists";
 import { handleGetTracks } from "./routes/tracks";
@@ -112,6 +112,24 @@ const server = serve({
     "/api/stats/summary": {
       GET(req) {
         return handleGetSummary(db, req);
+      },
+    },
+
+    "/api/stats/top-tracks": {
+      GET(req) {
+        return handleGetTopTracks(db, req);
+      },
+    },
+
+    "/api/stats/top-albums": {
+      GET(req) {
+        return handleGetTopAlbums(db, req);
+      },
+    },
+
+    "/api/stats/top-artists": {
+      GET(req) {
+        return handleGetTopArtists(db, req);
       },
     },
   },

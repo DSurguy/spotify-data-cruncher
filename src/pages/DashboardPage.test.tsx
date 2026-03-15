@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { DashboardPage } from "./DashboardPage";
-import type { GetSummaryResponse } from "@/routes/stats";
+import type { GetSummaryResponse, GetTopArtistsResponse, GetTopAlbumsResponse, GetTopTracksResponse } from "@/routes/stats";
 
 const mockSummary: GetSummaryResponse = {
   summary: {
@@ -15,11 +15,44 @@ const mockSummary: GetSummaryResponse = {
   },
 };
 
+const mockTopArtists: GetTopArtistsResponse = {
+  artists: [
+    { artist_key: "radiohead", artist_name: "Radiohead", play_count: 500, total_ms_played: 90_000_000 },
+    { artist_key: "portishead", artist_name: "Portishead", play_count: 200, total_ms_played: 40_000_000 },
+  ],
+};
+
+const mockTopAlbums: GetTopAlbumsResponse = {
+  albums: [
+    { album_key: "ok computer||radiohead", album_name: "OK Computer", artist_name: "Radiohead", play_count: 120, total_ms_played: 22_000_000 },
+    { album_key: "dummy||portishead", album_name: "Dummy", artist_name: "Portishead", play_count: 90, total_ms_played: 18_000_000 },
+  ],
+};
+
+const mockTopTracks: GetTopTracksResponse = {
+  tracks: [
+    { track_key: "spotify:track:aaa", track_name: "Karma Police", artist_name: "Radiohead", album_name: "OK Computer", play_count: 55, total_ms_played: 5_000_000 },
+    { track_key: "spotify:track:bbb", track_name: "Sour Times", artist_name: "Portishead", album_name: "Dummy", play_count: 42, total_ms_played: 4_000_000 },
+  ],
+};
+
+function makeFetchMock() {
+  return vi.fn().mockImplementation((url: string) => {
+    if (url.includes("top-artists")) {
+      return Promise.resolve({ ok: true, json: async () => mockTopArtists } as any);
+    }
+    if (url.includes("top-albums")) {
+      return Promise.resolve({ ok: true, json: async () => mockTopAlbums } as any);
+    }
+    if (url.includes("top-tracks")) {
+      return Promise.resolve({ ok: true, json: async () => mockTopTracks } as any);
+    }
+    return Promise.resolve({ ok: true, json: async () => mockSummary } as any);
+  });
+}
+
 beforeEach(() => {
-  globalThis.fetch = vi.fn().mockResolvedValue({
-    ok: true,
-    json: async () => mockSummary,
-  } as any);
+  globalThis.fetch = makeFetchMock();
 });
 
 describe("DashboardPage", () => {
@@ -46,5 +79,33 @@ describe("DashboardPage", () => {
   it("displays first played date", async () => {
     render(<DashboardPage />);
     await waitFor(() => screen.getByText("Aug 21, 2019"));
+  });
+
+  it("renders Top Artists panel with artist names", async () => {
+    render(<DashboardPage />);
+    await waitFor(() => screen.getByText("Top Artists"));
+    expect(screen.getAllByText("Radiohead").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Portishead").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders Top Albums panel with album and artist names", async () => {
+    render(<DashboardPage />);
+    await waitFor(() => screen.getByText("Top Albums"));
+    expect(screen.getByText("OK Computer")).toBeInTheDocument();
+    expect(screen.getByText("Dummy")).toBeInTheDocument();
+  });
+
+  it("renders Top Tracks panel with track names and play counts", async () => {
+    render(<DashboardPage />);
+    await waitFor(() => screen.getByText("Top Tracks"));
+    expect(screen.getByText("Karma Police")).toBeInTheDocument();
+    expect(screen.getByText("55 plays")).toBeInTheDocument();
+    expect(screen.getByText("Sour Times")).toBeInTheDocument();
+    expect(screen.getByText("42 plays")).toBeInTheDocument();
+  });
+
+  it("shows Loading state initially", () => {
+    render(<DashboardPage />);
+    expect(screen.getByText("Loading…")).toBeInTheDocument();
   });
 });

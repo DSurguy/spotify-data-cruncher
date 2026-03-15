@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { SummaryStats, GetSummaryResponse } from "@/routes/stats";
+import type {
+  SummaryStats, GetSummaryResponse,
+  TopArtist, GetTopArtistsResponse,
+  TopAlbum, GetTopAlbumsResponse,
+  TopTrack, GetTopTracksResponse,
+} from "@/routes/stats";
 
 function formatDuration(ms: number): string {
   const h = Math.floor(ms / 3_600_000);
@@ -37,15 +42,24 @@ function StatCard({ title, value, sub }: StatCardProps) {
 
 export function DashboardPage() {
   const [stats, setStats] = useState<SummaryStats | null>(null);
+  const [topArtists, setTopArtists] = useState<TopArtist[]>([]);
+  const [topAlbums, setTopAlbums] = useState<TopAlbum[]>([]);
+  const [topTracks, setTopTracks] = useState<TopTrack[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/stats/summary")
-      .then(r => r.json())
-      .then((body: GetSummaryResponse) => {
-        setStats(body.summary);
-        setLoading(false);
-      });
+    Promise.all([
+      fetch("/api/stats/summary").then(r => r.json() as Promise<GetSummaryResponse>),
+      fetch("/api/stats/top-artists?limit=10").then(r => r.json() as Promise<GetTopArtistsResponse>),
+      fetch("/api/stats/top-albums?limit=10").then(r => r.json() as Promise<GetTopAlbumsResponse>),
+      fetch("/api/stats/top-tracks?limit=10").then(r => r.json() as Promise<GetTopTracksResponse>),
+    ]).then(([summary, artists, albums, tracks]) => {
+      setStats(summary.summary);
+      setTopArtists(artists.artists);
+      setTopAlbums(albums.albums);
+      setTopTracks(tracks.tracks);
+      setLoading(false);
+    });
   }, []);
 
   if (loading) {
@@ -62,7 +76,7 @@ export function DashboardPage() {
     <div className="max-w-4xl mx-auto">
       <h2 className="text-2xl font-bold mb-6">Dashboard</h2>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
         <StatCard
           title="Total listening time"
           value={formatDuration(stats.total_ms_played)}
@@ -88,6 +102,71 @@ export function DashboardPage() {
           value={formatDate(stats.first_played)}
           sub={`through ${formatDate(stats.last_played)}`}
         />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Top Artists */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Top Artists</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <ol className="space-y-2">
+              {topArtists.map((a, i) => (
+                <li key={a.artist_key} className="flex items-center gap-2 text-sm">
+                  <span className="w-5 shrink-0 text-muted-foreground text-xs text-right">{i + 1}.</span>
+                  <span className="flex-1 truncate">{a.artist_name}</span>
+                  <span className="shrink-0 text-muted-foreground text-xs">{formatDuration(a.total_ms_played)}</span>
+                </li>
+              ))}
+              {topArtists.length === 0 && <li className="text-muted-foreground text-sm">No data</li>}
+            </ol>
+          </CardContent>
+        </Card>
+
+        {/* Top Albums */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Top Albums</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <ol className="space-y-2">
+              {topAlbums.map((a, i) => (
+                <li key={a.album_key} className="flex items-center gap-2 text-sm">
+                  <span className="w-5 shrink-0 text-muted-foreground text-xs text-right">{i + 1}.</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="truncate">{a.album_name}</p>
+                    <p className="truncate text-xs text-muted-foreground">{a.artist_name}</p>
+                  </div>
+                  <span className="shrink-0 text-muted-foreground text-xs">{formatDuration(a.total_ms_played)}</span>
+                </li>
+              ))}
+              {topAlbums.length === 0 && <li className="text-muted-foreground text-sm">No data</li>}
+            </ol>
+          </CardContent>
+        </Card>
+
+        {/* Top Tracks */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Top Tracks</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <ol className="space-y-2">
+              {topTracks.map((t, i) => (
+                <li key={t.track_key} className="flex items-center gap-2 text-sm">
+                  <span className="w-5 shrink-0 text-muted-foreground text-xs text-right">{i + 1}.</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="truncate">{t.track_name}</p>
+                    <p className="truncate text-xs text-muted-foreground">{t.artist_name}</p>
+                  </div>
+                  <span className="shrink-0 text-muted-foreground text-xs">{t.play_count.toLocaleString()} plays</span>
+                </li>
+              ))}
+              {topTracks.length === 0 && <li className="text-muted-foreground text-sm">No data</li>}
+            </ol>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
