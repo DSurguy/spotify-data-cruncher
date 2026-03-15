@@ -98,6 +98,28 @@ export interface GetAlbumsResponse {
   page_size: number;
 }
 
+// --- Tracks ---
+
+export interface Track {
+  track_key: string;           // spotify_track_uri, or fallback normalized key
+  track_name: string;
+  artist_name: string;
+  album_name: string | null;
+  play_count: number;
+  total_ms_played: number;
+  last_played: string;
+  skip_rate: number;           // 0–100 (percentage)
+  rating: number | null;
+  notes: string | null;
+}
+
+export interface GetTracksResponse {
+  tracks: Track[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
 // --- Artists ---
 
 export interface Artist {
