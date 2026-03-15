@@ -1,12 +1,19 @@
 import { useState } from "react";
 import { DatasetsPage } from "./pages/DatasetsPage";
 import { AlbumsPage } from "./pages/AlbumsPage";
+import { AlbumDetail } from "./pages/AlbumDetail";
 import "./index.css";
 
 type Page = "datasets" | "albums";
 
 export function App() {
-  const [page, setPage] = useState<Page>("datasets");
+  const [page, setPage] = useState<Page>("albums");
+  const [selectedAlbumKey, setSelectedAlbumKey] = useState<string | null>(null);
+
+  function navigateTo(p: Page) {
+    setPage(p);
+    setSelectedAlbumKey(null);
+  }
 
   return (
     <div className="flex h-screen bg-background text-foreground">
@@ -17,13 +24,18 @@ export function App() {
             Spotify Cruncher
           </h1>
         </div>
-        <NavItem label="Albums" active={page === "albums"} onClick={() => setPage("albums")} />
-        <NavItem label="Datasets" active={page === "datasets"} onClick={() => setPage("datasets")} />
+        <NavItem label="Albums" active={page === "albums"} onClick={() => navigateTo("albums")} />
+        <NavItem label="Datasets" active={page === "datasets"} onClick={() => navigateTo("datasets")} />
       </nav>
 
       {/* Main content */}
       <main className="flex-1 overflow-y-auto p-6">
-        {page === "albums" && <AlbumsPage onAlbumSelect={() => {}} />}
+        {page === "albums" && selectedAlbumKey === null && (
+          <AlbumsPage onAlbumSelect={key => setSelectedAlbumKey(key)} />
+        )}
+        {page === "albums" && selectedAlbumKey !== null && (
+          <AlbumDetail albumKey={selectedAlbumKey} onClose={() => setSelectedAlbumKey(null)} />
+        )}
         {page === "datasets" && <DatasetsPage />}
       </main>
     </div>

@@ -2,31 +2,39 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { App } from "./App";
 
-// DatasetsPage makes a fetch call on mount — stub it out
+// AlbumsPage (default) and DatasetsPage both make fetch calls on mount — stub them out
 beforeEach(() => {
   globalThis.fetch = vi.fn().mockResolvedValue({
     ok: true,
-    json: async () => ({ datasets: [] }),
+    json: async () => ({ datasets: [], albums: [], total: 0, page: 1, page_size: 50 }),
   } as any);
 });
 
 describe("App", () => {
-  it("renders the sidebar and Datasets nav item", async () => {
+  it("renders the sidebar and nav items", async () => {
     render(<App />);
     await waitFor(() => expect(screen.getByRole("navigation", { name: "sidebar" })).toBeInTheDocument());
     expect(screen.getByText("Spotify Cruncher")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Albums" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Datasets" })).toBeInTheDocument();
   });
 
-  it("shows the datasets page by default", async () => {
+  it("shows the Albums page by default", async () => {
     render(<App />);
-    await waitFor(() => expect(screen.getByText("Import Data")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Albums" })).toBeInTheDocument());
   });
 
-  it("nav item is marked active on the current page", async () => {
+  it("Albums nav item is marked active by default", async () => {
+    render(<App />);
+    await waitFor(() => screen.getByRole("button", { name: "Albums" }));
+    const btn = screen.getByRole("button", { name: "Albums" });
+    expect(btn.className).toContain("bg-accent");
+  });
+
+  it("navigates to Datasets page when Datasets nav is clicked", async () => {
     render(<App />);
     await waitFor(() => screen.getByRole("button", { name: "Datasets" }));
-    const btn = screen.getByRole("button", { name: "Datasets" });
-    expect(btn.className).toContain("bg-accent");
+    fireEvent.click(screen.getByRole("button", { name: "Datasets" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Import Data" })).toBeInTheDocument());
   });
 });

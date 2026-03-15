@@ -9,6 +9,7 @@ import {
 } from "./routes/datasets";
 import { handleImport } from "./routes/import-handler";
 import { handleGetAlbums, handleGetAlbum } from "./routes/albums";
+import { handleGetOverrides, handlePutOverrides, handleDeleteOverride } from "./routes/overrides";
 
 function parseDataDir(): string | undefined {
   const i = process.argv.indexOf("--data-dir");
@@ -53,6 +54,23 @@ const server = serve({
     "/api/albums/:key": {
       GET(req) {
         return handleGetAlbum(db, req, decodeURIComponent(req.params.key));
+      },
+    },
+
+    "/api/overrides/:type/:key": {
+      GET(req) {
+        return handleGetOverrides(db, req.params.type, decodeURIComponent(req.params.key));
+      },
+      async PUT(req) {
+        return handlePutOverrides(db, req, req.params.type, decodeURIComponent(req.params.key));
+      },
+    },
+
+    "/api/overrides/:type/:key/:field": {
+      DELETE(req) {
+        return handleDeleteOverride(
+          db, req.params.type, decodeURIComponent(req.params.key), req.params.field
+        );
       },
     },
   },
