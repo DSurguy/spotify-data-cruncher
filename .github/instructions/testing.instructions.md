@@ -1,6 +1,6 @@
 ---
 description: "Use when writing, reviewing, or modifying tests. Covers test structure, what to test for server routes and React UI, and testing conventions for this project."
-applyTo: ["src/**/*.test.ts", "src/**/*.test.tsx"]
+applyTo: "src/**/*.test.ts,src/**/*.test.tsx"
 ---
 
 # Testing Guidelines
