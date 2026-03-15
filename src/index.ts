@@ -8,6 +8,7 @@ import {
   handleDeleteDataset,
 } from "./routes/datasets";
 import { handleImport } from "./routes/import-handler";
+import { handleGetAlbums, handleGetAlbum } from "./routes/albums";
 
 function parseDataDir(): string | undefined {
   const i = process.argv.indexOf("--data-dir");
@@ -40,6 +41,18 @@ const server = serve({
       },
       DELETE(req) {
         return handleDeleteDataset(db, Number(req.params.id));
+      },
+    },
+
+    "/api/albums": {
+      GET(req) {
+        return handleGetAlbums(db, req);
+      },
+    },
+
+    "/api/albums/:key": {
+      GET(req) {
+        return handleGetAlbum(db, req, decodeURIComponent(req.params.key));
       },
     },
   },
