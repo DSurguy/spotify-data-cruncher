@@ -24,6 +24,7 @@ describe("App", () => {
     expect(screen.getByText("Spotify Cruncher")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Dashboard" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Albums" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Artists" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "History" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Datasets" })).toBeInTheDocument();
   });

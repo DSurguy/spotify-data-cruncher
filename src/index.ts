@@ -12,6 +12,7 @@ import { handleGetAlbums, handleGetAlbum } from "./routes/albums";
 import { handleGetOverrides, handlePutOverrides, handleDeleteOverride } from "./routes/overrides";
 import { handleGetSummary } from "./routes/stats";
 import { handleGetPlays } from "./routes/plays";
+import { handleGetArtists, handleGetArtist } from "./routes/artists";
 
 function parseDataDir(): string | undefined {
   const i = process.argv.indexOf("--data-dir");
@@ -73,6 +74,18 @@ const server = serve({
         return handleDeleteOverride(
           db, req.params.type, decodeURIComponent(req.params.key), req.params.field
         );
+      },
+    },
+
+    "/api/artists": {
+      GET(req) {
+        return handleGetArtists(db, req);
+      },
+    },
+
+    "/api/artists/:key": {
+      GET(req) {
+        return handleGetArtist(db, req, decodeURIComponent(req.params.key));
       },
     },
 
