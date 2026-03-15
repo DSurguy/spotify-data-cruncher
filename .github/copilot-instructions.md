@@ -31,11 +31,20 @@ bun test             # Run all tests
 
 ## Commit Discipline
 
-- **Commit small and often.** Each commit should represent a single coherent unit of work — a new route, a schema migration, a UI component, a bug fix.
-- **Never batch unrelated changes into one commit.** If a task touches both schema and UI, those are separate commits.
+- **Commit immediately after each unit of work is complete and tests pass.** Do not continue to the next piece of work until the current one is committed.
+- **Each commit is one coherent unit** — a new route, a schema migration, a UI component, a bug fix. Never accumulate multiple units and batch-commit them at the end.
+- **Never batch unrelated changes into one commit.** If a task touches both schema and UI, those are separate commits made at separate times.
 - **Commit messages use imperative present tense:** `Add plays API route`, `Fix album art BLOB serving`, `Migrate schema to v3`.
-- **Every commit should leave the codebase in a working state** — no half-implemented features unless clearly behind a feature flag or unreachable code path.
-- **Tests travel with the code they cover.** If you add a route or component, add its tests in the same commit.
+- **Every commit must leave the codebase in a working state** — no half-implemented features unless clearly behind a feature flag or unreachable code path.
+- **Tests travel with the code they cover.** If you add a route or component, add its tests in the same commit — then commit before moving on.
+
+### Commit workflow
+For every unit of work, follow this sequence without deviation:
+1. Write the code and its tests.
+2. Run the tests and confirm they pass.
+3. `git add` only the files for this unit.
+4. `git commit` with a clear message.
+5. Only then begin the next unit.
 
 ## Project Conventions
 
