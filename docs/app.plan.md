@@ -199,9 +199,9 @@ CREATE INDEX overrides_lookup ON metadata_overrides(entity_type, entity_key);
 
 | Entity Type | Overrideable Fields |
 |---|---|
-| `track` | `name`, `album`, `artist`, `genre`, `rating` (1–5 or null), `notes`, `art_path` |
+| `track` | `name`, `album`, `artist`, `genre`, `rating` (1–5 or null), `notes`, `art_path`, `reviewed` |
 | `album` | `name`, `artist`, `genre`, `rating`, `notes`, `art_path` |
-| `artist` | `name`, `genre`, `notes` |
+| `artist` | `name`, `genre`, `notes`, `reviewed` |
 | `episode` | `name`, `notes`, `rating` |
 | `show` | `name`, `genre`, `notes` |
 
@@ -300,6 +300,12 @@ All routes are prefixed with `/api`.
 
 Response includes per-album: `album_name`, `artist_name`, `play_count`, `total_ms_played`, `first_played`, `last_played`, `track_count` (unique tracks), `genre` override if set, `rating`, `art_url`.
 
+### Tracks
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/tracks` | Paginated list of unique tracks with aggregate stats |
+| `GET` | `/api/tracks/:key` | Track detail: metadata, all albums it appears on, full play history |
+
 ### Artists
 | Method | Path | Description |
 |---|---|---|
@@ -315,7 +321,6 @@ Response includes per-album: `album_name`, `artist_name`, `play_count`, `total_m
 | `GET` | `/api/stats/top-albums` | Top albums |
 | `GET` | `/api/stats/top-artists` | Top artists |
 | `GET` | `/api/stats/platforms` | Breakdown by platform |
-| `GET` | `/api/stats/heatmap` | Play counts by hour-of-day × day-of-week |
 
 All stats endpoints accept `dataset_id`, `from`, `to`, `content_type` filters.
 
@@ -373,8 +378,7 @@ Displays a summary of the selected dataset (or all datasets combined):
 - **Top 10 Artists** (by total listening time)
 - **Top 10 Albums** (by total listening time)
 - **Top 10 Tracks** (by play count)
-- **Heatmap:** Hour-of-day × day-of-week listening intensity
-- **Platform breakdown:** Pie chart of plays by platform category (mobile, desktop, web, cast, other)
+- **Platform breakdown:** Plays by platform category (mobile, desktop, web, cast, other)
 
 ---
 
@@ -419,14 +423,43 @@ Opens when an album is clicked. Shows:
 
 ### Artists View
 
-Same pattern as Albums. Each artist row shows total plays, total time, number of albums, date range, rating, notes. Clicking opens artist detail with all their albums listed.
+Same pattern as Albums. Each artist row shows total plays, total time, number of albums, date range, rating, notes, and a **Reviewed** indicator. Clicking opens the Artist Detail panel.
+
+**Filter options:** artist name, reviewed status (reviewed / unreviewed / all)
+
+**Artist Detail Panel:**
+- Artist name (editable)
+- Genre (editable)
+- Notes (freeform)
+- **Reviewed toggle** — mark the artist as evaluated
+- All albums by this artist (with play count, total time, rating)
+- Full play history for this artist (paginated)
 
 ---
 
 ### Tracks View
 
 Searchable, sortable table of all unique tracks:
-- Track name, Artist, Album, Play count, Total time, Last played, Skip rate (skipped plays / total plays × 100%), Rating, Notes
+- Track name, Artist, Album, Play count, Total time, Last played, Skip rate (skipped plays / total plays × 100%), Rating, Notes, Reviewed (checkbox/indicator)
+
+**Filter options:** artist name, track name, reviewed status (reviewed / unreviewed / all)
+
+Clicking a track opens the Track Detail page.
+
+---
+
+### Track Detail Page
+
+Opens when a track is clicked from the Tracks View or from within an Album Detail panel.
+
+- Track name (editable via override)
+- Artist name (editable)
+- Genre (editable)
+- Rating (1–5 stars)
+- Notes (freeform text area)
+- **Reviewed toggle** — a prominent checkbox or button the user flips to mark "I have evaluated this track"
+- **Albums this track appears on** — list of all albums in the play history that include this track (album name, artist, play count for this track on that album)
+- **Full play history** for this track (paginated, date descending)
 
 ---
 
@@ -493,6 +526,7 @@ Backend query logic:
 | `rating` | integer (1–5) or null | Personal rating |
 | `notes` | string | Freeform personal notes |
 | `art_path` | string | Key into `album_art` table |
+| `reviewed` | boolean (`"true"`/`"false"`) | User has evaluated this track or artist for inclusion in other libraries. Applies to `track` and `artist` only. |
 
 ---
 
