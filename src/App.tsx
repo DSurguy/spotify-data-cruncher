@@ -6,6 +6,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { ArtistsPage } from "./pages/ArtistsPage";
 import { TracksPage } from "./pages/TracksPage";
+import { TrackDetail } from "./pages/TrackDetail";
 import { PodcastsPage } from "./pages/PodcastsPage";
 import "./index.css";
 
@@ -14,10 +15,18 @@ type Page = "dashboard" | "albums" | "artists" | "tracks" | "podcasts" | "histor
 export function App() {
   const [page, setPage] = useState<Page>("dashboard");
   const [selectedAlbumKey, setSelectedAlbumKey] = useState<string | null>(null);
+  const [selectedTrackKey, setSelectedTrackKey] = useState<string | null>(null);
 
   function navigateTo(p: Page) {
     setPage(p);
     setSelectedAlbumKey(null);
+    setSelectedTrackKey(null);
+  }
+
+  function openAlbum(key: string) {
+    setPage("albums");
+    setSelectedAlbumKey(key);
+    setSelectedTrackKey(null);
   }
 
   return (
@@ -48,7 +57,16 @@ export function App() {
           <AlbumDetail albumKey={selectedAlbumKey} onClose={() => setSelectedAlbumKey(null)} />
         )}
         {page === "artists" && <ArtistsPage />}
-        {page === "tracks" && <TracksPage />}
+        {page === "tracks" && selectedTrackKey === null && (
+          <TracksPage onTrackSelect={key => setSelectedTrackKey(key)} />
+        )}
+        {page === "tracks" && selectedTrackKey !== null && (
+          <TrackDetail
+            trackKey={selectedTrackKey}
+            onClose={() => setSelectedTrackKey(null)}
+            onAlbumSelect={openAlbum}
+          />
+        )}
         {page === "podcasts" && <PodcastsPage />}
         {page === "history" && <HistoryPage />}
         {page === "datasets" && <DatasetsPage />}

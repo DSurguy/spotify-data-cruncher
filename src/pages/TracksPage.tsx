@@ -38,7 +38,7 @@ interface FilterState {
 
 const DEFAULT_FILTERS: FilterState = { track: "", artist: "", album: "", sort: "play_count_desc", reviewed: "all" };
 
-export function TracksPage() {
+export function TracksPage({ onTrackSelect }: { onTrackSelect?: (key: string) => void }) {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [draft, setDraft] = useState<FilterState>(DEFAULT_FILTERS);
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -196,7 +196,17 @@ export function TracksPage() {
           <tbody>
             {tracks.map(track => (
               <tr key={track.track_key} className="border-b last:border-0 hover:bg-muted/30">
-                <td className="px-3 py-2 max-w-[12rem] truncate font-medium">{track.track_name}</td>
+                <td className="px-3 py-2 max-w-[12rem] truncate font-medium">
+                  {onTrackSelect ? (
+                    <button
+                      type="button"
+                      className="hover:underline text-left truncate max-w-full"
+                      onClick={() => onTrackSelect(track.track_key)}
+                    >
+                      {track.track_name}
+                    </button>
+                  ) : track.track_name}
+                </td>
                 <td className="px-3 py-2 max-w-[10rem] truncate text-muted-foreground">{track.artist_name}</td>
                 <td className="px-3 py-2 max-w-[10rem] truncate text-muted-foreground">{track.album_name ?? "—"}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{track.play_count}</td>

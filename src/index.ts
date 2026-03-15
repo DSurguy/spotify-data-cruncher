@@ -13,7 +13,7 @@ import { handleGetOverrides, handlePutOverrides, handleDeleteOverride } from "./
 import { handleGetSummary, handleGetTopTracks, handleGetTopAlbums, handleGetTopArtists, handleGetTimeline, handleGetPlatforms } from "./routes/stats";
 import { handleGetPlays } from "./routes/plays";
 import { handleGetArtists, handleGetArtist } from "./routes/artists";
-import { handleGetTracks } from "./routes/tracks";
+import { handleGetTracks, handleGetTrack } from "./routes/tracks";
 import { handleGetPodcasts } from "./routes/podcasts";
 
 function parseDataDir(): string | undefined {
@@ -82,6 +82,12 @@ const server = serve({
     "/api/tracks": {
       GET(req) {
         return handleGetTracks(db, req);
+      },
+    },
+
+    "/api/tracks/:key": {
+      GET(req) {
+        return handleGetTrack(db, req, decodeURIComponent(req.params.key));
       },
     },
 

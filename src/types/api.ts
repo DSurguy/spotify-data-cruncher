@@ -121,6 +121,50 @@ export interface GetTracksResponse {
   page_size: number;
 }
 
+export interface TrackDetail {
+  track_key: string;
+  track_name: string;
+  artist_name: string;
+  album_name: string | null;
+  play_count: number;
+  total_ms_played: number;
+  last_played: string;
+  skip_rate: number;
+  skipped_count: number;
+  genre: string | null;
+  rating: number | null;
+  notes: string | null;
+  reviewed: boolean;
+}
+
+export interface TrackAlbumEntry {
+  album_key: string;
+  album_name: string;
+  artist_name: string;
+  play_count: number;
+}
+
+export interface TrackPlayItem {
+  ts: string;
+  ms_played: number;
+  skipped: boolean | null;
+  platform: string | null;
+  reason_start: string | null;
+  reason_end: string | null;
+  shuffle: boolean | null;
+}
+
+export interface GetTrackResponse {
+  track: TrackDetail;
+  albums: TrackAlbumEntry[];
+  plays: {
+    items: TrackPlayItem[];
+    total: number;
+    page: number;
+    page_size: number;
+  };
+}
+
 // --- Artists ---
 
 export interface Artist {

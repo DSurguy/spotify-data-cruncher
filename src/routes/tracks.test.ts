@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { Database } from "bun:sqlite";
 import { runMigrations } from "../db/migrations";
-import { handleGetTracks } from "./tracks";
+import { handleGetTracks, handleGetTrack } from "./tracks";
 
 function makeReq(path: string) {
   return new Request(`http://localhost${path}`);
@@ -153,5 +153,64 @@ describe("handleGetTracks", () => {
     const body = await res.json();
     expect(body.total).toBe(2); // Track B and Track C
     expect(body.tracks.every((t: any) => t.track_name !== "Track A")).toBe(true);
+  });
+});
+
+describe("handleGetTrack", () => {
+  let db: Database;
+
+  beforeEach(() => {
+    db = new Database(":memory:");
+    db.run("PRAGMA foreign_keys=ON");
+    runMigrations(db);
+    db.run(`INSERT INTO datasets (name, created_at) VALUES ('Test', '2024-01-01')`);
+    db.run(`INSERT INTO plays
+      (dataset_id, ts, ms_played, content_type, track_name, artist_name, album_name, spotify_track_uri, skipped)
+      VALUES
+      (1, '2024-01-01T10:00:00Z', 200000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa', 0),
+      (1, '2024-01-02T10:00:00Z', 180000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa', 1),
+      (1, '2024-01-03T10:00:00Z', 150000, 'track', 'Track B', 'Artist X', 'Album 2', 'spotify:track:bbb', null)`);
+  });
+
+  afterEach(() => db.close());
+
+  it("returns track metadata for valid key", async () => {
+    const res = handleGetTrack(db, makeReq("/api/tracks/spotify%3Atrack%3Aaaa"), "spotify:track:aaa");
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.track.track_name).toBe("Track A");
+    expect(body.track.play_count).toBe(2);
+    expect(body.track.skipped_count).toBe(1);
+  });
+
+  it("returns 404 for unknown key", async () => {
+    const res = handleGetTrack(db, makeReq("/api/tracks/unknown"), "unknown");
+    expect(res.status).toBe(404);
+  });
+
+  it("returns albums containing track", async () => {
+    const res = handleGetTrack(db, makeReq("/api/tracks/spotify%3Atrack%3Aaaa"), "spotify:track:aaa");
+    const body = await res.json();
+    expect(body.albums.length).toBe(1);
+    expect(body.albums[0].album_name).toBe("Album 1");
+    expect(body.albums[0].play_count).toBe(2);
+  });
+
+  it("returns paginated play history in desc order", async () => {
+    const res = handleGetTrack(db, makeReq("/api/tracks/spotify%3Atrack%3Aaaa"), "spotify:track:aaa");
+    const body = await res.json();
+    expect(body.plays.total).toBe(2);
+    expect(body.plays.items.length).toBe(2);
+    expect(body.plays.items[0].ts).toBe("2024-01-02T10:00:00Z");
+  });
+
+  it("includes override fields", async () => {
+    db.run(`INSERT INTO metadata_overrides (entity_type, entity_key, field, value, updated_at)
+      VALUES ('track', 'spotify:track:aaa', 'rating', '5', '2024-01-01T00:00:00Z'),
+             ('track', 'spotify:track:aaa', 'genre', '"Indie"', '2024-01-01T00:00:00Z')`);
+    const res = handleGetTrack(db, makeReq("/api/tracks/spotify%3Atrack%3Aaaa"), "spotify:track:aaa");
+    const body = await res.json();
+    expect(body.track.rating).toBe(5);
+    expect(body.track.genre).toBe("Indie");
   });
 });

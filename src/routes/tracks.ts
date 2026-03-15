@@ -1,5 +1,5 @@
 import type { Database } from "bun:sqlite";
-import type { Track, GetTracksResponse } from "../types/api";
+import type { Track, GetTracksResponse, TrackDetail, GetTrackResponse } from "../types/api";
 
 type TrackSort =
   | "name_asc"
@@ -142,5 +142,152 @@ export function handleGetTracks(db: Database, req: Request): Response {
   }));
 
   const body: GetTracksResponse = { tracks, total, page, page_size: pageSize };
+  return Response.json(body);
+}
+
+export function handleGetTrack(db: Database, _req: Request, key: string): Response {
+  const url = new URL(_req.url);
+  const p = url.searchParams;
+  const page = Math.max(1, parseInt(p.get("page") ?? "1", 10));
+  const pageSize = Math.min(200, Math.max(1, parseInt(p.get("page_size") ?? "50", 10)));
+
+  const keyFilter = `(${trackKeySql}) = ?`;
+
+  interface TrackDetailRow {
+    track_key: string;
+    track_name: string;
+    artist_name: string;
+    album_name: string | null;
+    play_count: number;
+    total_ms_played: number;
+    last_played: string;
+    skipped_count: number;
+    skip_rate: number;
+    genre: string | null;
+    rating: string | null;
+    notes: string | null;
+    reviewed_raw: string | null;
+  }
+
+  const trackRow = db.query<TrackDetailRow, [string]>(`
+    SELECT
+      (${trackKeySql}) AS track_key,
+      p.track_name,
+      p.artist_name,
+      p.album_name,
+      COUNT(*) AS play_count,
+      SUM(p.ms_played) AS total_ms_played,
+      MAX(p.ts) AS last_played,
+      SUM(CASE WHEN p.skipped = 1 THEN 1 ELSE 0 END) AS skipped_count,
+      CAST(SUM(CASE WHEN p.skipped = 1 THEN 1 ELSE 0 END) AS REAL) / COUNT(*) * 100 AS skip_rate,
+      (SELECT o.value FROM metadata_overrides o
+        WHERE o.entity_type = 'track'
+          AND o.entity_key = (${trackKeySql})
+          AND o.field = 'genre' LIMIT 1) AS genre,
+      (SELECT o.value FROM metadata_overrides o
+        WHERE o.entity_type = 'track'
+          AND o.entity_key = (${trackKeySql})
+          AND o.field = 'rating' LIMIT 1) AS rating,
+      (SELECT o.value FROM metadata_overrides o
+        WHERE o.entity_type = 'track'
+          AND o.entity_key = (${trackKeySql})
+          AND o.field = 'notes' LIMIT 1) AS notes,
+      (SELECT o.value FROM metadata_overrides o
+        WHERE o.entity_type = 'track'
+          AND o.entity_key = (${trackKeySql})
+          AND o.field = 'reviewed' LIMIT 1) AS reviewed_raw
+    FROM plays p
+    WHERE p.content_type = 'track'
+      AND ${keyFilter}
+    GROUP BY track_key
+  `).get(key);
+
+  if (!trackRow) return new Response("not found", { status: 404 });
+
+  interface AlbumRow {
+    album_key: string;
+    album_name: string | null;
+    artist_name: string | null;
+    play_count: number;
+  }
+
+  const albumRows = db.query<AlbumRow, [string]>(`
+    SELECT
+      lower(trim(COALESCE(p.album_name,''))) || '||' || lower(trim(COALESCE(p.artist_name,''))) AS album_key,
+      p.album_name,
+      p.artist_name,
+      COUNT(*) AS play_count
+    FROM plays p
+    WHERE p.content_type = 'track'
+      AND ${keyFilter}
+    GROUP BY lower(trim(COALESCE(p.album_name,''))), lower(trim(COALESCE(p.artist_name,'')))
+    ORDER BY play_count DESC
+  `).all(key);
+
+  interface PlayHistoryRow {
+    ts: string;
+    ms_played: number;
+    skipped: number | null;
+    platform: string | null;
+    reason_start: string | null;
+    reason_end: string | null;
+    shuffle: number | null;
+  }
+
+  const totalPlaysRow = db.query<{ n: number }, [string]>(
+    `SELECT COUNT(*) AS n FROM plays p WHERE p.content_type = 'track' AND ${keyFilter}`
+  ).get(key);
+  const totalPlays = totalPlaysRow?.n ?? 0;
+
+  const offset = (page - 1) * pageSize;
+  const playRows = db.query<PlayHistoryRow, [string]>(`
+    SELECT ts, ms_played, skipped, platform, reason_start, reason_end, shuffle
+    FROM plays p
+    WHERE p.content_type = 'track'
+      AND ${keyFilter}
+    ORDER BY ts DESC
+    LIMIT ${pageSize} OFFSET ${offset}
+  `).all(key);
+
+  const track: TrackDetail = {
+    track_key: trackRow.track_key,
+    track_name: trackRow.track_name,
+    artist_name: trackRow.artist_name,
+    album_name: trackRow.album_name,
+    play_count: trackRow.play_count,
+    total_ms_played: trackRow.total_ms_played,
+    last_played: trackRow.last_played,
+    skip_rate: Math.round((trackRow.skip_rate ?? 0) * 10) / 10,
+    skipped_count: trackRow.skipped_count,
+    genre: parseOverrideValue(trackRow.genre) as string | null,
+    rating: parseOverrideValue(trackRow.rating) as number | null,
+    notes: parseOverrideValue(trackRow.notes) as string | null,
+    reviewed: trackRow.reviewed_raw === "true",
+  };
+
+  const body: GetTrackResponse = {
+    track,
+    albums: albumRows.map(r => ({
+      album_key: r.album_key,
+      album_name: r.album_name ?? "",
+      artist_name: r.artist_name ?? "",
+      play_count: r.play_count,
+    })),
+    plays: {
+      items: playRows.map(r => ({
+        ts: r.ts,
+        ms_played: r.ms_played,
+        skipped: r.skipped === null ? null : r.skipped === 1,
+        platform: r.platform,
+        reason_start: r.reason_start,
+        reason_end: r.reason_end,
+        shuffle: r.shuffle === null ? null : r.shuffle === 1,
+      })),
+      total: totalPlays,
+      page,
+      page_size: pageSize,
+    },
+  };
+
   return Response.json(body);
 }
