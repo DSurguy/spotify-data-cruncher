@@ -1,7 +1,7 @@
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { DashboardPage } from "./DashboardPage";
-import type { GetSummaryResponse, GetTopArtistsResponse, GetTopAlbumsResponse, GetTopTracksResponse, GetTimelineResponse } from "@/routes/stats";
+import type { GetSummaryResponse, GetTopArtistsResponse, GetTopAlbumsResponse, GetTopTracksResponse, GetTimelineResponse, GetPlatformsResponse } from "@/routes/stats";
 
 const mockSummary: GetSummaryResponse = {
   summary: {
@@ -45,6 +45,14 @@ const mockTimeline: GetTimelineResponse = {
   ],
 };
 
+const mockPlatforms: GetPlatformsResponse = {
+  platforms: [
+    { platform: "macOS",   play_count: 800, total_ms_played: 50_000_000 },
+    { platform: "Android", play_count: 400, total_ms_played: 20_000_000 },
+    { platform: "Windows", play_count: 150, total_ms_played: 8_000_000 },
+  ],
+};
+
 function makeFetchMock() {
   return vi.fn().mockImplementation((url: string) => {
     if (url.includes("top-artists")) {
@@ -58,6 +66,9 @@ function makeFetchMock() {
     }
     if (url.includes("timeline")) {
       return Promise.resolve({ ok: true, json: async () => mockTimeline } as any);
+    }
+    if (url.includes("platforms")) {
+      return Promise.resolve({ ok: true, json: async () => mockPlatforms } as any);
     }
     return Promise.resolve({ ok: true, json: async () => mockSummary } as any);
   });
@@ -152,5 +163,14 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
     await waitFor(() => screen.getByLabelText("Filter by year"));
     expect(screen.getByLabelText("Filter by year")).toBeInTheDocument();
+  });
+
+  it("renders Platform Breakdown section with platform labels", async () => {
+    render(<DashboardPage />);
+    await waitFor(() => screen.getByText("Platform Breakdown"));
+    expect(screen.getByLabelText("Platform breakdown chart")).toBeInTheDocument();
+    expect(screen.getByText("macOS")).toBeInTheDocument();
+    expect(screen.getByText("Android")).toBeInTheDocument();
+    expect(screen.getByText("Windows")).toBeInTheDocument();
   });
 });

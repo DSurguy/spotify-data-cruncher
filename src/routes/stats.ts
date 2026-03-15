@@ -62,6 +62,16 @@ export interface GetSummaryResponse {
   summary: SummaryStats;
 }
 
+export interface PlatformStat {
+  platform: string;
+  play_count: number;
+  total_ms_played: number;
+}
+
+export interface GetPlatformsResponse {
+  platforms: PlatformStat[];
+}
+
 export function handleGetSummary(db: Database, req: Request): Response {
   const url = new URL(req.url);
   const datasetId = url.searchParams.get("dataset_id");
@@ -248,6 +258,35 @@ export function handleGetTimeline(db: Database, req: Request): Response {
   `).all(...params);
 
   const body: GetTimelineResponse = { points: rows, granularity };
+  return Response.json(body);
+}
+
+export function handleGetPlatforms(db: Database, req: Request): Response {
+  const url = new URL(req.url);
+  const { conditions, params } = buildTrackFilters(url.searchParams);
+  const where = conditions.map(c => `(${c})`).join(" AND ");
+
+  const rows = db.query<PlatformStat, typeof params>(`
+    SELECT platform, COUNT(*) AS play_count, SUM(ms_played) AS total_ms_played
+    FROM (
+      SELECT
+        CASE
+          WHEN lower(platform) = 'osx' OR lower(platform) LIKE '%os x%' THEN 'macOS'
+          WHEN lower(platform) LIKE '%windows%' THEN 'Windows'
+          WHEN lower(platform) = 'linux' THEN 'Linux'
+          WHEN lower(platform) = 'android' OR lower(platform) LIKE 'android%' THEN 'Android'
+          WHEN lower(platform) = 'cast' OR lower(platform) LIKE '%cast%' OR lower(platform) LIKE '%sony_tv%' THEN 'TV / Cast'
+          ELSE 'Other'
+        END AS platform,
+        ms_played
+      FROM plays
+      WHERE ${where}
+    )
+    GROUP BY platform
+    ORDER BY total_ms_played DESC
+  `).all(...params);
+
+  const body: GetPlatformsResponse = { platforms: rows };
   return Response.json(body);
 }
 

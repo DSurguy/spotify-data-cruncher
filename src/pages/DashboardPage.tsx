@@ -8,6 +8,7 @@ import type {
   TopAlbum, GetTopAlbumsResponse,
   TopTrack, GetTopTracksResponse,
   TimelinePoint, TimelineGranularity, GetTimelineResponse,
+  PlatformStat, GetPlatformsResponse,
 } from "@/routes/stats";
 
 function formatDuration(ms: number): string {
@@ -84,11 +85,39 @@ function TimelineChart({ points, granularity }: { points: TimelinePoint[]; granu
   );
 }
 
+function PlatformChart({ platforms }: { platforms: PlatformStat[] }) {
+  if (platforms.length === 0) {
+    return <p className="text-center text-muted-foreground text-sm py-4">No data</p>;
+  }
+  const max = platforms[0].total_ms_played;
+  return (
+    <div className="space-y-2" aria-label="Platform breakdown chart">
+      {platforms.map(p => {
+        const pct = max > 0 ? (p.total_ms_played / max) * 100 : 0;
+        return (
+          <div key={p.platform} className="flex items-center gap-3 text-sm">
+            <span className="w-20 shrink-0 text-right text-muted-foreground text-xs">{p.platform}</span>
+            <div className="flex-1 bg-muted rounded-full h-2.5 overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full"
+                style={{ width: `${pct}%` }}
+                title={`${p.platform}: ${p.play_count.toLocaleString()} plays, ${formatDuration(p.total_ms_played)}`}
+              />
+            </div>
+            <span className="w-16 shrink-0 text-xs text-muted-foreground">{formatDuration(p.total_ms_played)}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function DashboardPage() {
   const [stats, setStats] = useState<SummaryStats | null>(null);
   const [topArtists, setTopArtists] = useState<TopArtist[]>([]);
   const [topAlbums, setTopAlbums] = useState<TopAlbum[]>([]);
   const [topTracks, setTopTracks] = useState<TopTrack[]>([]);
+  const [platforms, setPlatforms] = useState<PlatformStat[]>([]);
   const [timeline, setTimeline] = useState<TimelinePoint[]>([]);
   const [tlGranularity, setTlGranularity] = useState<TimelineGranularity>("month");
   const [tlYear, setTlYear] = useState<string>("");
@@ -100,11 +129,13 @@ export function DashboardPage() {
       fetch("/api/stats/top-artists?limit=10").then(r => r.json() as Promise<GetTopArtistsResponse>),
       fetch("/api/stats/top-albums?limit=10").then(r => r.json() as Promise<GetTopAlbumsResponse>),
       fetch("/api/stats/top-tracks?limit=10").then(r => r.json() as Promise<GetTopTracksResponse>),
-    ]).then(([summary, artists, albums, tracks]) => {
+      fetch("/api/stats/platforms").then(r => r.json() as Promise<GetPlatformsResponse>),
+    ]).then(([summary, artists, albums, tracks, plat]) => {
       setStats(summary.summary);
       setTopArtists(artists.artists);
       setTopAlbums(albums.albums);
       setTopTracks(tracks.tracks);
+      setPlatforms(plat.platforms);
       setLoading(false);
     });
   }, []);
@@ -163,7 +194,6 @@ export function DashboardPage() {
         />
       </div>
 
-      {/* Timeline chart */}
       <Card className="mb-6">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -204,6 +234,16 @@ export function DashboardPage() {
         </CardHeader>
         <CardContent>
           <TimelineChart points={timeline} granularity={tlGranularity} />
+        </CardContent>
+      </Card>
+
+      {/* Platform breakdown */}
+      <Card className="mb-8">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Platform Breakdown</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PlatformChart platforms={platforms} />
         </CardContent>
       </Card>
 

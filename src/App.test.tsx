@@ -14,6 +14,8 @@ beforeEach(() => {
       data = { tracks: [] };
     } else if (url.includes("timeline")) {
       data = { points: [], granularity: "month" };
+    } else if (url.includes("platforms")) {
+      data = { platforms: [] };
     } else if (url.includes("stats/summary")) {
       data = { summary: { total_plays: 0, total_ms_played: 0, unique_tracks: 0, unique_albums: 0, unique_artists: 0, first_played: null, last_played: null } };
     } else {

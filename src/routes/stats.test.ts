@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { Database } from "bun:sqlite";
 import { runMigrations } from "../db/migrations";
-import { handleGetSummary, handleGetTopTracks, handleGetTopAlbums, handleGetTopArtists, handleGetTimeline } from "./stats";
+import { handleGetSummary, handleGetTopTracks, handleGetTopAlbums, handleGetTopArtists, handleGetTimeline, handleGetPlatforms } from "./stats";
 
 function makeReq(path: string) {
   return new Request(`http://localhost${path}`);
@@ -334,6 +334,85 @@ describe("handleGetTimeline", () => {
     const res = handleGetTimeline(db, makeReq("/api/stats/timeline"));
     const body = await res.json();
     expect(body.points).toHaveLength(0);
+  });
+});
+
+describe("handleGetPlatforms", () => {
+  let db: Database;
+
+  beforeEach(() => {
+    db = new Database(":memory:");
+    db.run("PRAGMA foreign_keys=ON");
+    runMigrations(db);
+    db.run(`INSERT INTO datasets (name, created_at) VALUES ('Test', '2024-01-01')`);
+    db.run(`INSERT INTO plays
+      (dataset_id, ts, ms_played, content_type, track_name, artist_name, album_name, spotify_track_uri, platform)
+      VALUES
+      (1, '2024-01-01T10:00:00Z', 300000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa', 'osx'),
+      (1, '2024-01-02T10:00:00Z', 200000, 'track', 'Track B', 'Artist X', 'Album 1', 'spotify:track:bbb', 'OS X 11.2.3 [x86 8]'),
+      (1, '2024-01-03T10:00:00Z', 150000, 'track', 'Track C', 'Artist Y', 'Album 2', 'spotify:track:ccc', 'android'),
+      (1, '2024-01-04T10:00:00Z', 100000, 'track', 'Track D', 'Artist Y', 'Album 2', 'spotify:track:ddd', 'Android OS 8.0.0 API 26 (LGE, LGUS997)'),
+      (1, '2024-01-05T10:00:00Z', 80000,  'track', 'Track E', 'Artist Z', 'Album 3', 'spotify:track:eee', 'windows'),
+      (1, '2024-01-06T10:00:00Z', 60000,  'track', 'Track F', 'Artist Z', 'Album 3', 'spotify:track:fff', 'cast'),
+      (1, '2024-01-07T10:00:00Z', 40000,  'track', 'Track G', 'Artist Z', 'Album 3', 'spotify:track:ggg', 'linux')`);
+    // podcast — should be excluded
+    db.run(`INSERT INTO plays (dataset_id, ts, ms_played, content_type, episode_name, episode_show_name, spotify_episode_uri, platform)
+      VALUES (1, '2024-01-08T08:00:00Z', 9999999, 'episode', 'Ep 1', 'Show Z', 'spotify:episode:ep1', 'android')`);
+  });
+
+  afterEach(() => db.close());
+
+  it("returns platforms sorted by total_ms_played desc", async () => {
+    const res = handleGetPlatforms(db, makeReq("/api/stats/platforms"));
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.platforms[0].platform).toBe("macOS");
+    expect(body.platforms[0].total_ms_played).toBe(500000); // 300000 + 200000
+    expect(body.platforms[1].platform).toBe("Android");
+    expect(body.platforms[1].total_ms_played).toBe(250000); // 150000 + 100000
+  });
+
+  it("categorizes long-form platform strings correctly", async () => {
+    const res = handleGetPlatforms(db, makeReq("/api/stats/platforms"));
+    const body = await res.json();
+    const names = body.platforms.map((p: any) => p.platform);
+    expect(names).toContain("macOS");
+    expect(names).toContain("Android");
+    expect(names).toContain("Windows");
+    expect(names).toContain("Linux");
+    expect(names).toContain("TV / Cast");
+  });
+
+  it("excludes non-track plays", async () => {
+    const res = handleGetPlatforms(db, makeReq("/api/stats/platforms"));
+    const body = await res.json();
+    const android = body.platforms.find((p: any) => p.platform === "Android");
+    // episode play on android (9999999ms) must be excluded — only 250000ms from tracks
+    expect(android.total_ms_played).toBe(250000);
+  });
+
+  it("includes play_count per platform", async () => {
+    const res = handleGetPlatforms(db, makeReq("/api/stats/platforms"));
+    const body = await res.json();
+    const macos = body.platforms.find((p: any) => p.platform === "macOS");
+    expect(macos.play_count).toBe(2);
+  });
+
+  it("filters by dataset_id", async () => {
+    db.run(`INSERT INTO datasets (name, created_at) VALUES ('Other', '2024-02-01')`);
+    db.run(`INSERT INTO plays (dataset_id, ts, ms_played, content_type, track_name, artist_name, album_name, spotify_track_uri, platform)
+      VALUES (2, '2024-02-01T10:00:00Z', 999000, 'track', 'X', 'Z', 'AlbumZ', 'spotify:track:zzz', 'linux')`);
+    const res = handleGetPlatforms(db, makeReq("/api/stats/platforms?dataset_id=2"));
+    const body = await res.json();
+    expect(body.platforms).toHaveLength(1);
+    expect(body.platforms[0].platform).toBe("Linux");
+  });
+
+  it("returns empty array when no data", async () => {
+    db.run("DELETE FROM plays");
+    const res = handleGetPlatforms(db, makeReq("/api/stats/platforms"));
+    const body = await res.json();
+    expect(body.platforms).toHaveLength(0);
   });
 });
 
