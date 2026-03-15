@@ -116,11 +116,10 @@ src/pages/AlbumsPage.test.tsx
 
 ## Temporary Files
 
-Prefer in-memory SQLite (`:memory:`) for all database tests. If a test genuinely requires a file on disk, write it to the local `./tmp/` directory (already in `.gitignore`), never to the system `/tmp/`. Clean up after the test in `afterEach`.
+Prefer in-memory SQLite (`:memory:`) for all database tests. If a test genuinely requires a file on disk, use `./tmp/` (see workspace instructions). Clean up in `afterEach`:
 
 ```typescript
 const dbPath = "./tmp/test-" + crypto.randomUUID() + ".db";
-// ... test ...
 afterEach(() => { db.close(); unlinkSync(dbPath); });
 ```
 

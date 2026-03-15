@@ -46,6 +46,10 @@ For every unit of work, follow this sequence without deviation:
 4. `git commit` with a clear message.
 5. Only then begin the next unit.
 
+## Temporary Files
+
+Always use the local `./tmp/` directory (already in `.gitignore`) for any temporary files — test artifacts, scratch output, downloaded files, shell redirects, etc. **Never use the system `/tmp/`.**
+
 ## Project Conventions
 
 - API routes live in `src/routes/` — one file per resource (e.g. `plays.ts`, `albums.ts`).
