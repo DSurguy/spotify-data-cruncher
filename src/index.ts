@@ -7,6 +7,7 @@ import {
   handlePatchDataset,
   handleDeleteDataset,
 } from "./routes/datasets";
+import { handleImport } from "./routes/import-handler";
 
 const db = openDatabase();
 
@@ -17,6 +18,9 @@ const server = serve({
     "/api/datasets": {
       GET() {
         return handleGetDatasets(db);
+      },
+      async POST(req) {
+        return handleImport(db, req);
       },
     },
 

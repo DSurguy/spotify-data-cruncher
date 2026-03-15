@@ -1,4 +1,5 @@
 import type { Database } from "bun:sqlite";
+import { readFileSync } from "fs";
 import type { ContentType } from "../types/db";
 
 // Raw shape of one record from a Spotify streaming history JSON file
@@ -113,10 +114,9 @@ export function importJsonFiles(
   let totalInserted = 0;
 
   for (const filePath of filePaths) {
-    const text = Bun.file(filePath).text();
     let records: SpotifyRecord[];
     try {
-      records = JSON.parse(text as unknown as string);
+      records = JSON.parse(readFileSync(filePath, "utf8"));
     } catch {
       continue; // skip unparseable files
     }
