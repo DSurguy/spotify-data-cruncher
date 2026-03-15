@@ -1,39 +1,41 @@
 import { serve } from "bun";
 import index from "./index.html";
+import { openDatabase } from "./db/database";
+import {
+  handleGetDatasets,
+  handleGetDataset,
+  handlePatchDataset,
+  handleDeleteDataset,
+} from "./routes/datasets";
+
+const db = openDatabase();
 
 const server = serve({
   routes: {
-    // Serve index.html for all unmatched routes.
     "/*": index,
 
-    "/api/hello": {
-      async GET(req) {
-        return Response.json({
-          message: "Hello, world!",
-          method: "GET",
-        });
-      },
-      async PUT(req) {
-        return Response.json({
-          message: "Hello, world!",
-          method: "PUT",
-        });
+    "/api/datasets": {
+      GET() {
+        return handleGetDatasets(db);
       },
     },
 
-    "/api/hello/:name": async req => {
-      const name = req.params.name;
-      return Response.json({
-        message: `Hello, ${name}!`,
-      });
+    "/api/datasets/:id": {
+      async GET(req) {
+        return handleGetDataset(db, Number(req.params.id));
+      },
+      async PATCH(req) {
+        const body = await req.json();
+        return handlePatchDataset(db, Number(req.params.id), body);
+      },
+      DELETE(req) {
+        return handleDeleteDataset(db, Number(req.params.id));
+      },
     },
   },
 
   development: process.env.NODE_ENV !== "production" && {
-    // Enable browser hot reloading in development
     hmr: true,
-
-    // Echo console logs from the browser to the server
     console: true,
   },
 });
