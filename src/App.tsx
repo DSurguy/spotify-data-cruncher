@@ -6,9 +6,10 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { ArtistsPage } from "./pages/ArtistsPage";
 import { TracksPage } from "./pages/TracksPage";
+import { PodcastsPage } from "./pages/PodcastsPage";
 import "./index.css";
 
-type Page = "dashboard" | "albums" | "artists" | "tracks" | "history" | "datasets";
+type Page = "dashboard" | "albums" | "artists" | "tracks" | "podcasts" | "history" | "datasets";
 
 export function App() {
   const [page, setPage] = useState<Page>("dashboard");
@@ -32,6 +33,7 @@ export function App() {
         <NavItem label="Albums" active={page === "albums"} onClick={() => navigateTo("albums")} />
         <NavItem label="Artists" active={page === "artists"} onClick={() => navigateTo("artists")} />
         <NavItem label="Tracks" active={page === "tracks"} onClick={() => navigateTo("tracks")} />
+        <NavItem label="Podcasts" active={page === "podcasts"} onClick={() => navigateTo("podcasts")} />
         <NavItem label="History" active={page === "history"} onClick={() => navigateTo("history")} />
         <NavItem label="Datasets" active={page === "datasets"} onClick={() => navigateTo("datasets")} />
       </nav>
@@ -47,6 +49,7 @@ export function App() {
         )}
         {page === "artists" && <ArtistsPage />}
         {page === "tracks" && <TracksPage />}
+        {page === "podcasts" && <PodcastsPage />}
         {page === "history" && <HistoryPage />}
         {page === "datasets" && <DatasetsPage />}
       </main>

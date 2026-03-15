@@ -142,6 +142,27 @@ export interface GetArtistsResponse {
   page_size: number;
 }
 
+// --- Podcasts ---
+
+export interface PodcastShow {
+  show_key: string;
+  show_name: string;
+  episode_count: number;
+  play_count: number;
+  total_ms_played: number;
+  first_played: string;
+  last_played: string;
+  genre: string | null;
+  notes: string | null;
+}
+
+export interface GetPodcastsResponse {
+  shows: PodcastShow[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
 // --- Metadata Overrides ---
 
 export interface MetadataOverride {

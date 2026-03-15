@@ -14,6 +14,7 @@ import { handleGetSummary } from "./routes/stats";
 import { handleGetPlays } from "./routes/plays";
 import { handleGetArtists, handleGetArtist } from "./routes/artists";
 import { handleGetTracks } from "./routes/tracks";
+import { handleGetPodcasts } from "./routes/podcasts";
 
 function parseDataDir(): string | undefined {
   const i = process.argv.indexOf("--data-dir");
@@ -99,6 +100,12 @@ const server = serve({
     "/api/plays": {
       GET(req) {
         return handleGetPlays(db, req);
+      },
+    },
+
+    "/api/podcasts": {
+      GET(req) {
+        return handleGetPodcasts(db, req);
       },
     },
 
