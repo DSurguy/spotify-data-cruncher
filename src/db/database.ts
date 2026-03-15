@@ -10,13 +10,10 @@ function getDataDir(): string {
   return join(process.env.HOME ?? "~", ".local", "share", "spotify-data-cruncher");
 }
 
-export function openDatabase(path?: string): Database {
-  const dbPath = path ?? join(getDataDir(), "data.db");
-
-  if (!path) {
-    mkdirSync(getDataDir(), { recursive: true });
-  }
-
+export function openDatabase(dataDir?: string): Database {
+  const dir = dataDir ?? getDataDir();
+  mkdirSync(dir, { recursive: true });
+  const dbPath = join(dir, "data.db");
   const db = new Database(dbPath);
   db.run("PRAGMA journal_mode=WAL");
   db.run("PRAGMA foreign_keys=ON");

@@ -9,7 +9,13 @@ import {
 } from "./routes/datasets";
 import { handleImport } from "./routes/import-handler";
 
-const db = openDatabase();
+function parseDataDir(): string | undefined {
+  const i = process.argv.indexOf("--data-dir");
+  return i !== -1 ? process.argv[i + 1] : undefined;
+}
+
+const dataDir = parseDataDir();
+const db = openDatabase(dataDir);
 
 const server = serve({
   routes: {
@@ -45,3 +51,4 @@ const server = serve({
 });
 
 console.log(`🚀 Server running at ${server.url}`);
+console.log(`💾 Database: ${dataDir ?? "(default user data dir)"}`);
