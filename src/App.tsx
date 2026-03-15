@@ -1,38 +1,42 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { APITester } from "./APITester";
+import { useState } from "react";
+import { DatasetsPage } from "./pages/DatasetsPage";
 import "./index.css";
 
-import logo from "./logo.svg";
-import reactLogo from "./react.svg";
+type Page = "datasets";
 
 export function App() {
+  const [page, setPage] = useState<Page>("datasets");
+
   return (
-    <div className="container mx-auto p-8 text-center relative z-10">
-      <div className="flex justify-center items-center gap-8 mb-8">
-        <img
-          src={logo}
-          alt="Bun Logo"
-          className="h-36 p-6 transition-all duration-300 hover:drop-shadow-[0_0_2em_#646cffaa] scale-120"
-        />
-        <img
-          src={reactLogo}
-          alt="React Logo"
-          className="h-36 p-6 transition-all duration-300 hover:drop-shadow-[0_0_2em_#61dafbaa] [animation:spin_20s_linear_infinite]"
-        />
-      </div>
-      <Card>
-        <CardHeader className="gap-4">
-          <CardTitle className="text-3xl font-bold">Bun + React</CardTitle>
-          <CardDescription>
-            Edit <code className="rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono">src/App.tsx</code> and save to
-            test HMR
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <APITester />
-        </CardContent>
-      </Card>
+    <div className="flex h-screen bg-background text-foreground">
+      {/* Sidebar */}
+      <nav aria-label="sidebar" className="w-52 shrink-0 border-r flex flex-col gap-1 p-3">
+        <div className="px-2 py-3 mb-2">
+          <h1 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            Spotify Cruncher
+          </h1>
+        </div>
+        <NavItem label="Datasets" active={page === "datasets"} onClick={() => setPage("datasets")} />
+      </nav>
+
+      {/* Main content */}
+      <main className="flex-1 overflow-y-auto p-6">
+        {page === "datasets" && <DatasetsPage />}
+      </main>
     </div>
+  );
+}
+
+function NavItem({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
+        active ? "bg-accent text-accent-foreground font-medium" : "hover:bg-muted text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {label}
+    </button>
   );
 }
 
