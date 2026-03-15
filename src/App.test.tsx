@@ -2,32 +2,40 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { App } from "./App";
 
-// AlbumsPage (default) and DatasetsPage both make fetch calls on mount — stub them out
+// All pages make fetch calls on mount — stub with a response that works for all
 beforeEach(() => {
   globalThis.fetch = vi.fn().mockResolvedValue({
     ok: true,
-    json: async () => ({ datasets: [], albums: [], total: 0, page: 1, page_size: 50 }),
+    json: async () => ({
+      // stats/summary
+      summary: { total_plays: 0, total_ms_played: 0, unique_tracks: 0, unique_albums: 0, unique_artists: 0, first_played: null, last_played: null },
+      // datasets
+      datasets: [],
+      // albums
+      albums: [], total: 0, page: 1, page_size: 50,
+    }),
   } as any);
 });
 
 describe("App", () => {
-  it("renders the sidebar and nav items", async () => {
+  it("renders the sidebar and all nav items", async () => {
     render(<App />);
     await waitFor(() => expect(screen.getByRole("navigation", { name: "sidebar" })).toBeInTheDocument());
     expect(screen.getByText("Spotify Cruncher")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Dashboard" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Albums" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Datasets" })).toBeInTheDocument();
   });
 
-  it("shows the Albums page by default", async () => {
+  it("shows the Dashboard page by default", async () => {
     render(<App />);
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Albums" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Dashboard" })).toBeInTheDocument());
   });
 
-  it("Albums nav item is marked active by default", async () => {
+  it("Dashboard nav item is marked active by default", async () => {
     render(<App />);
-    await waitFor(() => screen.getByRole("button", { name: "Albums" }));
-    const btn = screen.getByRole("button", { name: "Albums" });
+    await waitFor(() => screen.getByRole("button", { name: "Dashboard" }));
+    const btn = screen.getByRole("button", { name: "Dashboard" });
     expect(btn.className).toContain("bg-accent");
   });
 

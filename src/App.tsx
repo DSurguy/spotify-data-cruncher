@@ -2,12 +2,13 @@ import { useState } from "react";
 import { DatasetsPage } from "./pages/DatasetsPage";
 import { AlbumsPage } from "./pages/AlbumsPage";
 import { AlbumDetail } from "./pages/AlbumDetail";
+import { DashboardPage } from "./pages/DashboardPage";
 import "./index.css";
 
-type Page = "datasets" | "albums";
+type Page = "dashboard" | "datasets" | "albums";
 
 export function App() {
-  const [page, setPage] = useState<Page>("albums");
+  const [page, setPage] = useState<Page>("dashboard");
   const [selectedAlbumKey, setSelectedAlbumKey] = useState<string | null>(null);
 
   function navigateTo(p: Page) {
@@ -24,12 +25,14 @@ export function App() {
             Spotify Cruncher
           </h1>
         </div>
+        <NavItem label="Dashboard" active={page === "dashboard"} onClick={() => navigateTo("dashboard")} />
         <NavItem label="Albums" active={page === "albums"} onClick={() => navigateTo("albums")} />
         <NavItem label="Datasets" active={page === "datasets"} onClick={() => navigateTo("datasets")} />
       </nav>
 
       {/* Main content */}
       <main className="flex-1 overflow-y-auto p-6">
+        {page === "dashboard" && <DashboardPage />}
         {page === "albums" && selectedAlbumKey === null && (
           <AlbumsPage onAlbumSelect={key => setSelectedAlbumKey(key)} />
         )}
