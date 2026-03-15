@@ -6,9 +6,9 @@ interface OverrideInput {
 }
 
 const VALID_FIELDS: Record<string, string[]> = {
-  track:   ["name", "artist", "album", "genre", "rating", "notes", "art_path"],
+  track:   ["name", "artist", "album", "genre", "rating", "notes", "art_path", "reviewed"],
   album:   ["name", "artist", "genre", "rating", "notes", "art_path"],
-  artist:  ["name", "genre", "notes"],
+  artist:  ["name", "genre", "notes", "reviewed"],
   episode: ["name", "notes", "rating"],
   show:    ["name", "genre", "notes"],
 };

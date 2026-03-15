@@ -126,4 +126,60 @@ describe("handleGetArtist", () => {
     const res = handleGetArtist(db, makeReq("/api/artists/nobody"), "nobody");
     expect(res.status).toBe(404);
   });
+
+  it("reviewed defaults to false when no override", async () => {
+    const res = handleGetArtist(db, makeReq("/api/artists/artist+x"), "artist x");
+    const body = await res.json();
+    expect(body.reviewed).toBe(false);
+  });
+
+  it("reviewed is true when override set", async () => {
+    db.run(`INSERT INTO metadata_overrides (entity_type, entity_key, field, value, updated_at)
+      VALUES ('artist', 'artist x', 'reviewed', 'true', '2024-01-01T00:00:00Z')`);
+    const res = handleGetArtist(db, makeReq("/api/artists/artist+x"), "artist x");
+    const body = await res.json();
+    expect(body.reviewed).toBe(true);
+  });
+});
+
+describe("handleGetArtists reviewed filter", () => {
+  let db: Database;
+
+  beforeEach(() => {
+    db = new Database(":memory:");
+    db.run("PRAGMA foreign_keys=ON");
+    runMigrations(db);
+    db.run(`INSERT INTO datasets (name, created_at) VALUES ('Test', '2024-01-01')`);
+    db.run(`INSERT INTO plays
+      (dataset_id, ts, ms_played, content_type, track_name, artist_name, album_name, spotify_track_uri)
+      VALUES
+      (1, '2024-01-01T10:00:00Z', 200000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa'),
+      (1, '2024-01-02T10:00:00Z', 180000, 'track', 'Track B', 'Artist Y', 'Album 2', 'spotify:track:bbb')`);
+  });
+
+  afterEach(() => db.close());
+
+  it("reviewed defaults to false", async () => {
+    const res = handleGetArtists(db, makeReq("/api/artists"));
+    const body = await res.json();
+    expect(body.artists.every((a: any) => a.reviewed === false)).toBe(true);
+  });
+
+  it("filters reviewed=true returns only reviewed artists", async () => {
+    db.run(`INSERT INTO metadata_overrides (entity_type, entity_key, field, value, updated_at)
+      VALUES ('artist', 'artist x', 'reviewed', 'true', '2024-01-01T00:00:00Z')`);
+    const res = handleGetArtists(db, makeReq("/api/artists?reviewed=true"));
+    const body = await res.json();
+    expect(body.total).toBe(1);
+    expect(body.artists[0].artist_name).toBe("Artist X");
+  });
+
+  it("filters reviewed=false returns only unreviewed artists", async () => {
+    db.run(`INSERT INTO metadata_overrides (entity_type, entity_key, field, value, updated_at)
+      VALUES ('artist', 'artist x', 'reviewed', 'true', '2024-01-01T00:00:00Z')`);
+    const res = handleGetArtists(db, makeReq("/api/artists?reviewed=false"));
+    const body = await res.json();
+    expect(body.total).toBe(1);
+    expect(body.artists[0].artist_name).toBe("Artist Y");
+  });
 });

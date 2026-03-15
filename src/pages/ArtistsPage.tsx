@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { Artist, GetArtistsResponse } from "@/types/api";
 
 type ArtistSort = "total_ms_desc" | "play_count_desc" | "name_asc" | "last_played_desc" | "rating_desc";
+type ReviewedFilter = "all" | "reviewed" | "unreviewed";
 
 function formatDuration(ms: number): string {
   const h = Math.floor(ms / 3_600_000);
@@ -26,9 +27,10 @@ function StarRating({ value }: { value: number | null }) {
 interface FilterState {
   artist: string;
   sort: ArtistSort;
+  reviewed: ReviewedFilter;
 }
 
-const DEFAULT_FILTERS: FilterState = { artist: "", sort: "total_ms_desc" };
+const DEFAULT_FILTERS: FilterState = { artist: "", sort: "total_ms_desc", reviewed: "all" };
 
 export function ArtistsPage() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
@@ -39,6 +41,24 @@ export function ArtistsPage() {
   const [loading, setLoading] = useState(true);
   const PAGE_SIZE = 50;
 
+  async function toggleReviewed(artist: Artist) {
+    const newVal = !artist.reviewed;
+    setArtists(prev => prev.map(a =>
+      a.artist_key === artist.artist_key ? { ...a, reviewed: newVal } : a
+    ));
+    if (newVal) {
+      await fetch(`/api/overrides/artist/${encodeURIComponent(artist.artist_key)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify([{ field: "reviewed", value: "true" }]),
+      });
+    } else {
+      await fetch(`/api/overrides/artist/${encodeURIComponent(artist.artist_key)}/reviewed`, {
+        method: "DELETE",
+      });
+    }
+  }
+
   const load = useCallback(async (f: FilterState, p: number) => {
     setLoading(true);
     const params = new URLSearchParams({
@@ -47,6 +67,7 @@ export function ArtistsPage() {
       page_size: String(PAGE_SIZE),
     });
     if (f.artist) params.set("artist", f.artist);
+    if (f.reviewed !== "all") params.set("reviewed", f.reviewed === "reviewed" ? "true" : "false");
     const res = await fetch(`/api/artists?${params}`);
     const body: GetArtistsResponse = await res.json();
     setArtists(body.artists);
@@ -101,6 +122,19 @@ export function ArtistsPage() {
             </SelectContent>
           </Select>
         </div>
+        <div className="flex flex-col gap-1">
+          <Label>Reviewed</Label>
+          <Select value={draft.reviewed} onValueChange={v => setDraft(f => ({ ...f, reviewed: v as ReviewedFilter }))}>
+            <SelectTrigger className="w-36" aria-label="Reviewed filter">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="unreviewed">Unreviewed</SelectItem>
+              <SelectItem value="reviewed">Reviewed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="flex gap-2">
           <Button onClick={applyFilters}>Apply</Button>
           <Button variant="outline" onClick={clearFilters}>Clear</Button>
@@ -135,6 +169,15 @@ export function ArtistsPage() {
               <p>{formatDuration(artist.total_ms_played)}</p>
               <StarRating value={artist.rating} />
             </div>
+            <button
+              aria-label={artist.reviewed ? "Mark unreviewed" : "Mark reviewed"}
+              onClick={() => toggleReviewed(artist)}
+              className={`shrink-0 text-xl leading-none transition-colors ${
+                artist.reviewed ? "text-green-500 hover:text-muted-foreground" : "text-muted-foreground hover:text-green-500"
+              }`}
+            >
+              {artist.reviewed ? "✓" : "○"}
+            </button>
           </div>
         ))}
         {!loading && artists.length === 0 && (

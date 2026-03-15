@@ -111,6 +111,7 @@ export interface Track {
   skip_rate: number;           // 0–100 (percentage)
   rating: number | null;
   notes: string | null;
+  reviewed: boolean;
 }
 
 export interface GetTracksResponse {
@@ -133,6 +134,7 @@ export interface Artist {
   genre: string | null;
   rating: number | null;
   notes: string | null;
+  reviewed: boolean;
 }
 
 export interface GetArtistsResponse {

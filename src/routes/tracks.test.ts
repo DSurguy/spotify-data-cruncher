@@ -119,4 +119,39 @@ describe("handleGetTracks", () => {
     const a = body.tracks.find((t: any) => t.track_name === "Track A");
     expect(a.rating).toBe(5);
   });
+
+  it("reviewed defaults to false when no override", async () => {
+    const res = handleGetTracks(db, makeReq("/api/tracks"));
+    const body = await res.json();
+    expect(body.tracks.every((t: any) => t.reviewed === false)).toBe(true);
+  });
+
+  it("reviewed is true when override set to 'true'", async () => {
+    db.run(`INSERT INTO metadata_overrides (entity_type, entity_key, field, value, updated_at)
+      VALUES ('track', 'spotify:track:aaa', 'reviewed', 'true', '2024-01-01T00:00:00Z')`);
+    const res = handleGetTracks(db, makeReq("/api/tracks"));
+    const body = await res.json();
+    const a = body.tracks.find((t: any) => t.track_name === "Track A");
+    expect(a.reviewed).toBe(true);
+    const b = body.tracks.find((t: any) => t.track_name === "Track B");
+    expect(b.reviewed).toBe(false);
+  });
+
+  it("filters reviewed=true returns only reviewed tracks", async () => {
+    db.run(`INSERT INTO metadata_overrides (entity_type, entity_key, field, value, updated_at)
+      VALUES ('track', 'spotify:track:aaa', 'reviewed', 'true', '2024-01-01T00:00:00Z')`);
+    const res = handleGetTracks(db, makeReq("/api/tracks?reviewed=true"));
+    const body = await res.json();
+    expect(body.total).toBe(1);
+    expect(body.tracks[0].track_name).toBe("Track A");
+  });
+
+  it("filters reviewed=false returns only unreviewed tracks", async () => {
+    db.run(`INSERT INTO metadata_overrides (entity_type, entity_key, field, value, updated_at)
+      VALUES ('track', 'spotify:track:aaa', 'reviewed', 'true', '2024-01-01T00:00:00Z')`);
+    const res = handleGetTracks(db, makeReq("/api/tracks?reviewed=false"));
+    const body = await res.json();
+    expect(body.total).toBe(2); // Track B and Track C
+    expect(body.tracks.every((t: any) => t.track_name !== "Track A")).toBe(true);
+  });
 });

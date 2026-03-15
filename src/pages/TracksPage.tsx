@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { Track, GetTracksResponse } from "@/types/api";
 
 type TrackSort = "play_count_desc" | "total_ms_desc" | "name_asc" | "last_played_desc" | "skip_rate_desc" | "rating_desc";
+type ReviewedFilter = "all" | "reviewed" | "unreviewed";
 
 function formatDuration(ms: number): string {
   const h = Math.floor(ms / 3_600_000);
@@ -32,9 +33,10 @@ interface FilterState {
   artist: string;
   album: string;
   sort: TrackSort;
+  reviewed: ReviewedFilter;
 }
 
-const DEFAULT_FILTERS: FilterState = { track: "", artist: "", album: "", sort: "play_count_desc" };
+const DEFAULT_FILTERS: FilterState = { track: "", artist: "", album: "", sort: "play_count_desc", reviewed: "all" };
 
 export function TracksPage() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
@@ -44,6 +46,24 @@ export function TracksPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const PAGE_SIZE = 50;
+
+  async function toggleReviewed(track: Track) {
+    const newVal = !track.reviewed;
+    setTracks(prev => prev.map(t =>
+      t.track_key === track.track_key ? { ...t, reviewed: newVal } : t
+    ));
+    if (newVal) {
+      await fetch(`/api/overrides/track/${encodeURIComponent(track.track_key)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify([{ field: "reviewed", value: "true" }]),
+      });
+    } else {
+      await fetch(`/api/overrides/track/${encodeURIComponent(track.track_key)}/reviewed`, {
+        method: "DELETE",
+      });
+    }
+  }
 
   const load = useCallback(async (f: FilterState, p: number) => {
     setLoading(true);
@@ -55,6 +75,7 @@ export function TracksPage() {
     if (f.track)  params.set("track", f.track);
     if (f.artist) params.set("artist", f.artist);
     if (f.album)  params.set("album", f.album);
+    if (f.reviewed !== "all") params.set("reviewed", f.reviewed === "reviewed" ? "true" : "false");
     const res = await fetch(`/api/tracks?${params}`);
     const body: GetTracksResponse = await res.json();
     setTracks(body.tracks);
@@ -132,6 +153,19 @@ export function TracksPage() {
             </SelectContent>
           </Select>
         </div>
+        <div className="flex flex-col gap-1">
+          <Label>Reviewed</Label>
+          <Select value={draft.reviewed} onValueChange={v => setDraft(f => ({ ...f, reviewed: v as ReviewedFilter }))}>
+            <SelectTrigger className="w-36" aria-label="Reviewed filter">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="unreviewed">Unreviewed</SelectItem>
+              <SelectItem value="reviewed">Reviewed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="flex gap-2">
           <Button onClick={applyFilters}>Apply</Button>
           <Button variant="outline" onClick={clearFilters}>Clear</Button>
@@ -156,6 +190,7 @@ export function TracksPage() {
               <th className="text-left px-3 py-2 font-medium">Last played</th>
               <th className="text-right px-3 py-2 font-medium">Skip %</th>
               <th className="text-left px-3 py-2 font-medium">Rating</th>
+              <th className="text-center px-3 py-2 font-medium">Reviewed</th>
             </tr>
           </thead>
           <tbody>
@@ -169,11 +204,22 @@ export function TracksPage() {
                 <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{formatDate(track.last_played)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{track.skip_rate}%</td>
                 <td className="px-3 py-2"><StarRating value={track.rating} /></td>
+                <td className="px-3 py-2 text-center">
+                  <button
+                    aria-label={track.reviewed ? "Mark unreviewed" : "Mark reviewed"}
+                    onClick={() => toggleReviewed(track)}
+                    className={`text-base leading-none transition-colors ${
+                      track.reviewed ? "text-green-500 hover:text-muted-foreground" : "text-muted-foreground hover:text-green-500"
+                    }`}
+                  >
+                    {track.reviewed ? "✓" : "○"}
+                  </button>
+                </td>
               </tr>
             ))}
             {!loading && tracks.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">No tracks found.</td>
+                <td colSpan={9} className="px-3 py-8 text-center text-muted-foreground">No tracks found.</td>
               </tr>
             )}
           </tbody>

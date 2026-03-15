@@ -29,6 +29,7 @@ interface TrackRow {
   skipped_count: number;
   rating: string | null;
   notes: string | null;
+  reviewed_raw: string | null;
 }
 
 function parseOverrideValue(raw: string | null): string | number | null {
@@ -54,6 +55,7 @@ export function handleGetTracks(db: Database, req: Request): Response {
   const album = p.get("album");
   const from = p.get("from");
   const to = p.get("to");
+  const reviewedParam = p.get("reviewed"); // "true" | "false" | null
   const sort: TrackSort = (p.get("sort") as TrackSort) || "play_count_desc";
   const page = Math.max(1, parseInt(p.get("page") ?? "1", 10));
   const pageSize = Math.min(200, Math.max(1, parseInt(p.get("page_size") ?? "50", 10)));
@@ -91,7 +93,11 @@ export function handleGetTracks(db: Database, req: Request): Response {
       (SELECT o.value FROM metadata_overrides o
         WHERE o.entity_type = 'track'
           AND o.entity_key = (${trackKeySql})
-          AND o.field = 'notes' LIMIT 1) AS notes
+          AND o.field = 'notes' LIMIT 1) AS notes,
+      (SELECT o.value FROM metadata_overrides o
+        WHERE o.entity_type = 'track'
+          AND o.entity_key = (${trackKeySql})
+          AND o.field = 'reviewed' LIMIT 1) AS reviewed_raw
     FROM plays p
     WHERE ${where}
     GROUP BY track_key
@@ -103,16 +109,22 @@ export function handleGetTracks(db: Database, req: Request): Response {
     FROM (${baseQuery}) inner_q
   `;
 
+  const reviewedFilter =
+    reviewedParam === "true"  ? "WHERE reviewed_raw = 'true'" :
+    reviewedParam === "false" ? "WHERE (reviewed_raw IS NULL OR reviewed_raw != 'true')" :
+    "";
+  const filteredQuery = `SELECT * FROM (${withSkipRate}) rq ${reviewedFilter}`;
+
   const sortClause = SORT_CLAUSES[sort];
   const offset = (page - 1) * pageSize;
 
   const countRow = db.query<{ n: number }, typeof params>(
-    `SELECT COUNT(*) AS n FROM (${withSkipRate}) sub`
+    `SELECT COUNT(*) AS n FROM (${filteredQuery}) sub`
   ).get(...params);
   const total = countRow?.n ?? 0;
 
   const rows = db.query<TrackRow & { skip_rate: number }, typeof params>(
-    `${withSkipRate} ORDER BY ${sortClause} LIMIT ${pageSize} OFFSET ${offset}`
+    `${filteredQuery} ORDER BY ${sortClause} LIMIT ${pageSize} OFFSET ${offset}`
   ).all(...params);
 
   const tracks: Track[] = rows.map(r => ({
@@ -126,6 +138,7 @@ export function handleGetTracks(db: Database, req: Request): Response {
     skip_rate: Math.round((r.skip_rate ?? 0) * 10) / 10,
     rating: parseOverrideValue(r.rating) as number | null,
     notes: parseOverrideValue(r.notes) as string | null,
+    reviewed: r.reviewed_raw === "true",
   }));
 
   const body: GetTracksResponse = { tracks, total, page, page_size: pageSize };

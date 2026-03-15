@@ -29,6 +29,7 @@ interface ArtistRow {
   rating: string | null;
   genre: string | null;
   notes: string | null;
+  reviewed_raw: string | null;
 }
 
 function parseOverrideValue(raw: string | null): string | number | null {
@@ -47,6 +48,7 @@ export function handleGetArtists(db: Database, req: Request): Response {
   const from = p.get("from");
   const to = p.get("to");
   const ratedOnly = p.get("rated") === "true";
+  const reviewedParam = p.get("reviewed"); // "true" | "false" | null
   const sort: ArtistSort = (p.get("sort") as ArtistSort) || "total_ms_desc";
   const page = Math.max(1, parseInt(p.get("page") ?? "1", 10));
   const pageSize = Math.min(200, Math.max(1, parseInt(p.get("page_size") ?? "50", 10)));
@@ -85,23 +87,32 @@ export function handleGetArtists(db: Database, req: Request): Response {
       (SELECT o.value FROM metadata_overrides o
         WHERE o.entity_type = 'artist'
           AND o.entity_key = ${artistKeySql}
-          AND o.field = 'notes' LIMIT 1) AS notes
+          AND o.field = 'notes' LIMIT 1) AS notes,
+      (SELECT o.value FROM metadata_overrides o
+        WHERE o.entity_type = 'artist'
+          AND o.entity_key = ${artistKeySql}
+          AND o.field = 'reviewed' LIMIT 1) AS reviewed_raw
     FROM plays p
     WHERE ${where}
     GROUP BY artist_key
   `;
 
   const havingClause = ratedOnly ? "HAVING rating IS NOT NULL" : "";
+  const reviewedFilter =
+    reviewedParam === "true"  ? "WHERE reviewed_raw = 'true'" :
+    reviewedParam === "false" ? "WHERE (reviewed_raw IS NULL OR reviewed_raw != 'true')" :
+    "";
+  const filteredQuery = `SELECT * FROM (${baseQuery} ${havingClause}) rq ${reviewedFilter}`;
   const sortClause = SORT_CLAUSES[sort];
   const offset = (page - 1) * pageSize;
 
   const countRow = db.query<{ n: number }, typeof params>(
-    `SELECT COUNT(*) AS n FROM (${baseQuery} ${havingClause}) sub`
+    `SELECT COUNT(*) AS n FROM (${filteredQuery}) sub`
   ).get(...params);
   const total = countRow?.n ?? 0;
 
   const rows = db.query<ArtistRow, typeof params>(
-    `${baseQuery} ${havingClause} ORDER BY ${sortClause} LIMIT ${pageSize} OFFSET ${offset}`
+    `${filteredQuery} ORDER BY ${sortClause} LIMIT ${pageSize} OFFSET ${offset}`
   ).all(...params);
 
   const artists: Artist[] = rows.map(r => ({
@@ -115,6 +126,7 @@ export function handleGetArtists(db: Database, req: Request): Response {
     genre: parseOverrideValue(r.genre) as string | null,
     rating: parseOverrideValue(r.rating) as number | null,
     notes: parseOverrideValue(r.notes) as string | null,
+    reviewed: r.reviewed_raw === "true",
   }));
 
   const body: GetArtistsResponse = { artists, total, page, page_size: pageSize };
@@ -165,6 +177,7 @@ export function handleGetArtist(db: Database, req: Request, key: string): Respon
     genre: parseOverrideValue(getOverride("genre")) as string | null,
     rating: parseOverrideValue(getOverride("rating")) as number | null,
     notes: parseOverrideValue(getOverride("notes")) as string | null,
+    reviewed: getOverride("reviewed") === "true",
   };
 
   return Response.json(artist);
