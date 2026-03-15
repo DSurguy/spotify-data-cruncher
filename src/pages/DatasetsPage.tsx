@@ -53,29 +53,27 @@ export function DatasetsPage() {
 
 function ImportForm({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState("");
-  const [path, setPath] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!file) return;
     setError(null);
     setBusy(true);
     try {
-      const res = await fetch("/api/datasets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() || undefined, path: path.trim() }),
-      });
+      const formData = new FormData();
+      if (name.trim()) formData.set("name", name.trim());
+      formData.set("file", file);
+      const res = await fetch("/api/datasets", { method: "POST", body: formData });
       if (!res.ok) {
-        const msg = await res.text();
-        setError(msg);
+        setError(await res.text());
         return;
       }
       const body = await res.json();
       const inserted: number = body.import.inserted_records;
       onDone();
-      // Brief feedback before closing
       alert(`Import complete: ${inserted.toLocaleString()} records imported.`);
     } catch (err) {
       setError(String(err));
@@ -89,7 +87,7 @@ function ImportForm({ onDone }: { onDone: () => void }) {
       <CardHeader>
         <CardTitle>Import Spotify Data</CardTitle>
         <CardDescription>
-          Point to the folder containing your <code>Streaming_History_*.json</code> files.
+          Upload the ZIP file from your Spotify data export.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -104,17 +102,17 @@ function ImportForm({ onDone }: { onDone: () => void }) {
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="import-path">Path to folder</Label>
-            <Input
-              id="import-path"
-              placeholder="/home/you/spotify-export/unzipped"
-              value={path}
-              onChange={e => setPath(e.target.value)}
-              required
+            <Label htmlFor="import-file">Spotify export ZIP</Label>
+            <input
+              id="import-file"
+              type="file"
+              accept=".zip"
+              className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-primary-foreground"
+              onChange={e => setFile(e.target.files?.[0] ?? null)}
             />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" disabled={busy || !path.trim()}>
+          <Button type="submit" disabled={busy || !file}>
             {busy ? "Importing…" : "Import"}
           </Button>
         </form>

@@ -1,5 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { readFileSync } from "fs";
+import { unzipSync } from "fflate";
 import type { ContentType } from "../types/db";
 
 // Raw shape of one record from a Spotify streaming history JSON file
@@ -119,6 +120,35 @@ export function importJsonFiles(
       records = JSON.parse(readFileSync(filePath, "utf8"));
     } catch {
       continue; // skip unparseable files
+    }
+    if (!Array.isArray(records)) continue;
+
+    const result = importRecords(db, datasetId, records);
+    totalRecords += result.total_records;
+    totalInserted += result.inserted_records;
+  }
+
+  return { total_records: totalRecords, inserted_records: totalInserted };
+}
+
+export function importZip(
+  db: Database,
+  datasetId: number,
+  zipBuffer: Uint8Array
+): ImportResult {
+  const files = unzipSync(zipBuffer);
+  let totalRecords = 0;
+  let totalInserted = 0;
+
+  for (const [name, data] of Object.entries(files)) {
+    const filename = name.split("/").pop() ?? name;
+    if (!filename.startsWith("Streaming_History_") || !filename.endsWith(".json")) continue;
+
+    let records: SpotifyRecord[];
+    try {
+      records = JSON.parse(new TextDecoder().decode(data));
+    } catch {
+      continue;
     }
     if (!Array.isArray(records)) continue;
 

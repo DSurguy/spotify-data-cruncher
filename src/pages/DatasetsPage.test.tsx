@@ -39,7 +39,7 @@ describe("DatasetsPage", () => {
     render(<DatasetsPage />);
     await waitFor(() => screen.getByRole("button", { name: "Import Data" }));
     fireEvent.click(screen.getByRole("button", { name: "Import Data" }));
-    expect(screen.getByLabelText("Path to folder")).toBeInTheDocument();
+    expect(screen.getByLabelText("Spotify export ZIP")).toBeInTheDocument();
   });
 
   it("hides the import form when Cancel is clicked", async () => {
@@ -47,10 +47,10 @@ describe("DatasetsPage", () => {
     await waitFor(() => screen.getByRole("button", { name: "Import Data" }));
     fireEvent.click(screen.getByRole("button", { name: "Import Data" }));
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(screen.queryByLabelText("Path to folder")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Spotify export ZIP")).not.toBeInTheDocument();
   });
 
-  it("submit button is disabled when path is empty", async () => {
+  it("submit button is disabled when no file is selected", async () => {
     render(<DatasetsPage />);
     await waitFor(() => screen.getByRole("button", { name: "Import Data" }));
     fireEvent.click(screen.getByRole("button", { name: "Import Data" }));
@@ -58,29 +58,31 @@ describe("DatasetsPage", () => {
     expect(submit).toBeDisabled();
   });
 
-  it("submit button enables when path is filled", async () => {
+  it("submit button enables when a file is selected", async () => {
     render(<DatasetsPage />);
     await waitFor(() => screen.getByRole("button", { name: "Import Data" }));
     fireEvent.click(screen.getByRole("button", { name: "Import Data" }));
-    fireEvent.change(screen.getByLabelText("Path to folder"), {
-      target: { value: "/some/path" },
-    });
+    const fileInput = screen.getByLabelText("Spotify export ZIP") as HTMLInputElement;
+    const file = new File(["PK"], "export.zip", { type: "application/zip" });
+    Object.defineProperty(fileInput, "files", { value: [file] });
+    fireEvent.change(fileInput);
     expect(screen.getByRole("button", { name: "Import" })).not.toBeDisabled();
   });
 
   it("shows error message when import request fails", async () => {
     (globalThis.fetch as any)
       .mockResolvedValueOnce({ ok: true, json: async () => ({ datasets: [] }) })
-      .mockResolvedValueOnce({ ok: false, text: async () => "path does not exist" });
+      .mockResolvedValueOnce({ ok: false, text: async () => "invalid zip" });
 
     render(<DatasetsPage />);
     await waitFor(() => screen.getByRole("button", { name: "Import Data" }));
     fireEvent.click(screen.getByRole("button", { name: "Import Data" }));
-    fireEvent.change(screen.getByLabelText("Path to folder"), {
-      target: { value: "/bad/path" },
-    });
+    const fileInput = screen.getByLabelText("Spotify export ZIP") as HTMLInputElement;
+    const file = new File(["PK"], "export.zip", { type: "application/zip" });
+    Object.defineProperty(fileInput, "files", { value: [file] });
+    fireEvent.change(fileInput);
     fireEvent.click(screen.getByRole("button", { name: "Import" }));
-    await waitFor(() => expect(screen.getByText("path does not exist")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("invalid zip")).toBeInTheDocument());
   });
 
   it("shows delete confirmation on Delete click", async () => {
