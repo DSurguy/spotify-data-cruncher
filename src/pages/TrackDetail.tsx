@@ -62,12 +62,6 @@ export function TrackDetail({ trackKey, from, onClose, onAlbumSelect }: TrackDet
   const [loading, setLoading] = useState(true);
   const [playsPage, setPlaysPage] = useState(1);
 
-  // View-mode notes form
-  const [genre, setGenre] = useState("");
-  const [notes, setNotes] = useState("");
-  const [viewSaving, setViewSaving] = useState(false);
-  const [viewSaved, setViewSaved] = useState(false);
-
   // Review mode state
   const [mode, setMode] = useState<"view" | "review">(from === "review" ? "review" : "view");
   const [reviewRating, setReviewRating] = useState<Rating | null>(null);
@@ -83,8 +77,6 @@ export function TrackDetail({ trackKey, from, onClose, onAlbumSelect }: TrackDet
       .then((body: GetTrackResponse) => {
         setData(body);
         if (playsPage === 1) {
-          setGenre(body.track.genre ?? "");
-          setNotes(body.track.notes ?? "");
           setReviewRating((body.track.rating as Rating | null) ?? null);
           setReviewNotes(body.track.notes ?? "");
           setReviewGenre(body.track.genre ?? "");
@@ -92,21 +84,6 @@ export function TrackDetail({ trackKey, from, onClose, onAlbumSelect }: TrackDet
         setLoading(false);
       });
   }, [trackKey, playsPage]);
-
-  async function saveViewNotes() {
-    setViewSaving(true);
-    setViewSaved(false);
-    await fetch(`/api/overrides/track/${encodeURIComponent(trackKey)}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([
-        { field: "genre", value: genre.trim() ? JSON.stringify(genre.trim()) : null },
-        { field: "notes", value: notes.trim() ? JSON.stringify(notes.trim()) : null },
-      ]),
-    });
-    setViewSaving(false);
-    setViewSaved(true);
-  }
 
   async function completeReview() {
     if (!reviewRating) return;
@@ -152,11 +129,6 @@ export function TrackDetail({ trackKey, from, onClose, onAlbumSelect }: TrackDet
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-4">
         <Button variant="ghost" size="sm" onClick={onClose}>{backLabel}</Button>
-        {mode === "view" && (
-          <Button variant="outline" size="sm" onClick={() => { setMode("review"); setReviewComplete(false); }}>
-            {track.reviewed ? "Edit Review" : "Review this track →"}
-          </Button>
-        )}
         {mode === "review" && from === "explore" && (
           <Button variant="ghost" size="sm" onClick={() => setMode("view")}>Exit review mode</Button>
         )}
@@ -238,42 +210,31 @@ export function TrackDetail({ trackKey, from, onClose, onAlbumSelect }: TrackDet
         )}
       </div>
 
-      {/* View-mode notes */}
+      {/* Review card */}
       {mode === "view" && (
-        <div className="border rounded-lg p-5 flex flex-col gap-4 mb-6">
-          <h3 className="font-semibold text-sm">Your notes</h3>
-
-          <div>
-            <Label className="mb-1.5 block">Rating</Label>
+        <div className="border rounded-lg mb-6 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b">
+            <h3 className="font-semibold text-sm">Review</h3>
             <RatingDisplay value={track.rating as Rating | null} />
           </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="track-genre">Genre</Label>
-            <Input
-              id="track-genre"
-              placeholder="e.g. Indie Rock"
-              value={genre}
-              onChange={e => setGenre(e.target.value)}
-            />
+          <div className="px-4 py-3 flex flex-col gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Genre</p>
+              <p className="text-sm">{track.genre ?? <span className="text-muted-foreground">—</span>}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Notes</p>
+              <p className="text-sm">{track.notes ?? <span className="text-muted-foreground">—</span>}</p>
+            </div>
           </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="track-notes">Notes</Label>
-            <Textarea
-              id="track-notes"
-              placeholder="Your thoughts on this track…"
-              rows={4}
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-            />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button onClick={saveViewNotes} disabled={viewSaving}>
-              {viewSaving ? "Saving…" : "Save"}
-            </Button>
-            {viewSaved && <span className="text-sm text-muted-foreground">Saved!</span>}
+          <div className="px-4 py-3 border-t">
+            <button
+              type="button"
+              className="text-sm text-primary hover:underline"
+              onClick={() => { setMode("review"); setReviewComplete(false); }}
+            >
+              Edit Review
+            </button>
           </div>
         </div>
       )}

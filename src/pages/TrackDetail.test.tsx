@@ -67,12 +67,12 @@ describe("TrackDetail", () => {
 
   it("starts in view mode when from=explore", async () => {
     render(<TrackDetail trackKey="spotify:track:abc" from="explore" onClose={() => {}} />);
-    await waitFor(() => screen.getByLabelText("Genre"));
+    await waitFor(() => screen.getByRole("heading", { name: "Review" }));
     expect(screen.queryByRole("group", { name: "Rating" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Review this track/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit Review" })).toBeInTheDocument();
   });
 
-  it("shows rating in view-mode notes section", async () => {
+  it("shows rating in view-mode review card", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -81,21 +81,42 @@ describe("TrackDetail", () => {
       }),
     } as any);
     render(<TrackDetail trackKey="spotify:track:abc" from="explore" onClose={() => {}} />);
-    await waitFor(() => screen.getByLabelText("Genre"));
+    await waitFor(() => screen.getByRole("heading", { name: "Review" }));
     expect(screen.getByText("♥ Like")).toBeInTheDocument();
   });
 
-  it("shows 'Edit Review' button when track is already reviewed", async () => {
+  it("shows genre and notes in view-mode review card", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         ...mockTrackResponse,
-        track: { ...mockTrackResponse.track, rating: "like", reviewed: true },
+        track: { ...mockTrackResponse.track, genre: "Art Rock", notes: "A classic." },
       }),
     } as any);
     render(<TrackDetail trackKey="spotify:track:abc" from="explore" onClose={() => {}} />);
+    await waitFor(() => screen.getByRole("heading", { name: "Review" }));
+    expect(screen.getByText("Art Rock")).toBeInTheDocument();
+    expect(screen.getByText("A classic.")).toBeInTheDocument();
+  });
+
+  it("shows '—' placeholder when genre and notes are empty", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ...mockTrackResponse,
+        track: { ...mockTrackResponse.track, genre: null, notes: null },
+      }),
+    } as any);
+    render(<TrackDetail trackKey="spotify:track:abc" from="explore" onClose={() => {}} />);
+    await waitFor(() => screen.getByRole("heading", { name: "Review" }));
+    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("'Edit Review' link in view card enters review mode", async () => {
+    render(<TrackDetail trackKey="spotify:track:abc" from="explore" onClose={() => {}} />);
     await waitFor(() => screen.getByRole("button", { name: "Edit Review" }));
-    expect(screen.queryByRole("button", { name: /Review this track/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Edit Review" }));
+    expect(screen.getByRole("group", { name: "Rating" })).toBeInTheDocument();
   });
 
   it("starts in review mode when from=review", async () => {
@@ -123,19 +144,19 @@ describe("TrackDetail", () => {
 
   it("entering review mode from explore shows 'Exit review mode' button", async () => {
     render(<TrackDetail trackKey="spotify:track:abc" from="explore" onClose={() => {}} />);
-    await waitFor(() => screen.getByRole("button", { name: /Review this track/ }));
-    fireEvent.click(screen.getByRole("button", { name: /Review this track/ }));
+    await waitFor(() => screen.getByRole("button", { name: "Edit Review" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit Review" }));
     expect(screen.getByRole("button", { name: "Exit review mode" })).toBeInTheDocument();
   });
 
   it("'Exit review mode' returns to view mode", async () => {
     render(<TrackDetail trackKey="spotify:track:abc" from="explore" onClose={() => {}} />);
-    await waitFor(() => screen.getByRole("button", { name: /Review this track/ }));
-    fireEvent.click(screen.getByRole("button", { name: /Review this track/ }));
+    await waitFor(() => screen.getByRole("button", { name: "Edit Review" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit Review" }));
     expect(screen.getByRole("button", { name: "Exit review mode" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Exit review mode" }));
     expect(screen.queryByRole("button", { name: "Exit review mode" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Review this track/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Review" })).toBeInTheDocument();
   });
 
   it("completing review from=review shows 'Review another?' prompt", async () => {
