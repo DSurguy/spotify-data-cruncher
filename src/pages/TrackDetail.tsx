@@ -18,9 +18,10 @@ interface TrackDetailProps {
   trackKey: string;
   onClose: () => void;
   onAlbumSelect?: (albumKey: string) => void;
+  onArtistSelect?: (artistKey: string) => void;
 }
 
-export function TrackDetail({ trackKey, onClose, onAlbumSelect }: TrackDetailProps) {
+export function TrackDetail({ trackKey, onClose, onAlbumSelect, onArtistSelect }: TrackDetailProps) {
   const [data, setData] = useState<GetTrackResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [playsPage, setPlaysPage] = useState(1);
@@ -64,7 +65,18 @@ export function TrackDetail({ trackKey, onClose, onAlbumSelect }: TrackDetailPro
       <div className="mb-6">
         <h2 className="text-2xl font-bold">{track.track_name}</h2>
         <p className="text-xs text-muted-foreground uppercase tracking-wide mt-1">Artist</p>
-        <p className="text-muted-foreground">{track.artist_name}</p>
+        {onArtistSelect ? (
+          <button
+            type="button"
+            className="group/name flex items-center gap-1 text-muted-foreground"
+            onClick={() => onArtistSelect(track.artist_name.toLowerCase().trim())}
+          >
+            <span className="underline underline-offset-2">{track.artist_name}</span>
+            <span className="opacity-0 group-hover/name:opacity-100 text-xs transition-opacity" aria-hidden="true">→</span>
+          </button>
+        ) : (
+          <p className="text-muted-foreground">{track.artist_name}</p>
+        )}
         <div className="flex flex-wrap gap-6 mt-2 text-sm text-muted-foreground">
           <span>{track.play_count} plays</span>
           <span>{formatDuration(track.total_ms_played)}</span>

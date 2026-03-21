@@ -63,6 +63,7 @@ export function App() {
             trackKey={detail.key}
             onClose={closeDetail}
             onAlbumSelect={openAlbum}
+            onArtistSelect={openArtist}
           />
         )}
         {detail?.type === "album" && (

@@ -98,6 +98,19 @@ describe("TrackDetail", () => {
     expect(onAlbumSelect).toHaveBeenCalledWith("ok computer||radiohead");
   });
 
+  it("renders artist name as a link when onArtistSelect is provided", async () => {
+    render(<TrackDetail trackKey="spotify:track:abc" onClose={() => {}} onArtistSelect={() => {}} />);
+    await waitFor(() => screen.getByRole("button", { name: "Radiohead" }));
+  });
+
+  it("calls onArtistSelect when artist name is clicked", async () => {
+    const onArtistSelect = vi.fn();
+    render(<TrackDetail trackKey="spotify:track:abc" onClose={() => {}} onArtistSelect={onArtistSelect} />);
+    await waitFor(() => screen.getByRole("button", { name: "Radiohead" }));
+    fireEvent.click(screen.getByRole("button", { name: "Radiohead" }));
+    expect(onArtistSelect).toHaveBeenCalledWith("radiohead");
+  });
+
   it("shows play history table", async () => {
     render(<TrackDetail trackKey="spotify:track:abc" onClose={() => {}} />);
     await waitFor(() => screen.getByText("Play history (1)"));
