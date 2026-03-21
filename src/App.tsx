@@ -1,32 +1,45 @@
 import { useState } from "react";
 import { DatasetsPage } from "./pages/DatasetsPage";
-import { AlbumsPage } from "./pages/AlbumsPage";
 import { AlbumDetail } from "./pages/AlbumDetail";
 import { DashboardPage } from "./pages/DashboardPage";
 import { HistoryPage } from "./pages/HistoryPage";
-import { ArtistsPage } from "./pages/ArtistsPage";
-import { TracksPage } from "./pages/TracksPage";
+import { ArtistDetail } from "./pages/ArtistDetail";
 import { TrackDetail } from "./pages/TrackDetail";
 import { PodcastsPage } from "./pages/PodcastsPage";
+import { ExplorePage } from "./pages/ExplorePage";
+import { ReviewPage } from "./pages/ReviewPage";
 import "./index.css";
 
-type Page = "dashboard" | "albums" | "artists" | "tracks" | "podcasts" | "history" | "datasets";
+type Page = "dashboard" | "explore" | "review" | "podcasts" | "history" | "datasets";
+type DetailView =
+  | { type: "track"; key: string; from: "explore" | "review" }
+  | { type: "album"; key: string }
+  | { type: "artist"; key: string }
+  | null;
 
 export function App() {
   const [page, setPage] = useState<Page>("dashboard");
-  const [selectedAlbumKey, setSelectedAlbumKey] = useState<string | null>(null);
-  const [selectedTrackKey, setSelectedTrackKey] = useState<string | null>(null);
+  const [detail, setDetail] = useState<DetailView>(null);
 
   function navigateTo(p: Page) {
     setPage(p);
-    setSelectedAlbumKey(null);
-    setSelectedTrackKey(null);
+    setDetail(null);
+  }
+
+  function openTrack(key: string, from: "explore" | "review") {
+    setDetail({ type: "track", key, from });
   }
 
   function openAlbum(key: string) {
-    setPage("albums");
-    setSelectedAlbumKey(key);
-    setSelectedTrackKey(null);
+    setDetail({ type: "album", key });
+  }
+
+  function openArtist(key: string) {
+    setDetail({ type: "artist", key });
+  }
+
+  function closeDetail() {
+    setDetail(null);
   }
 
   return (
@@ -38,38 +51,54 @@ export function App() {
             Spotify Cruncher
           </h1>
         </div>
-        <NavItem label="Dashboard" active={page === "dashboard"} onClick={() => navigateTo("dashboard")} />
-        <NavItem label="Albums" active={page === "albums"} onClick={() => navigateTo("albums")} />
-        <NavItem label="Artists" active={page === "artists"} onClick={() => navigateTo("artists")} />
-        <NavItem label="Tracks" active={page === "tracks"} onClick={() => navigateTo("tracks")} />
-        <NavItem label="Podcasts" active={page === "podcasts"} onClick={() => navigateTo("podcasts")} />
-        <NavItem label="History" active={page === "history"} onClick={() => navigateTo("history")} />
-        <NavItem label="Datasets" active={page === "datasets"} onClick={() => navigateTo("datasets")} />
+        <NavItem label="Dashboard" active={page === "dashboard" && detail === null} onClick={() => navigateTo("dashboard")} />
+        <NavItem label="Explore"   active={page === "explore"}   onClick={() => navigateTo("explore")} />
+        <NavItem label="Review"    active={page === "review"}    onClick={() => navigateTo("review")} />
+        <NavItem label="Podcasts"  active={page === "podcasts" && detail === null}  onClick={() => navigateTo("podcasts")} />
+        <NavItem label="History"   active={page === "history" && detail === null}   onClick={() => navigateTo("history")} />
+        <NavItem label="Datasets"  active={page === "datasets" && detail === null}  onClick={() => navigateTo("datasets")} />
       </nav>
 
       {/* Main content */}
       <main className="flex-1 overflow-y-auto p-6">
-        {page === "dashboard" && <DashboardPage />}
-        {page === "albums" && selectedAlbumKey === null && (
-          <AlbumsPage onAlbumSelect={key => setSelectedAlbumKey(key)} />
-        )}
-        {page === "albums" && selectedAlbumKey !== null && (
-          <AlbumDetail albumKey={selectedAlbumKey} onClose={() => setSelectedAlbumKey(null)} />
-        )}
-        {page === "artists" && <ArtistsPage />}
-        {page === "tracks" && selectedTrackKey === null && (
-          <TracksPage onTrackSelect={key => setSelectedTrackKey(key)} />
-        )}
-        {page === "tracks" && selectedTrackKey !== null && (
+        {detail?.type === "track" && (
           <TrackDetail
-            trackKey={selectedTrackKey}
-            onClose={() => setSelectedTrackKey(null)}
+            trackKey={detail.key}
+            from={detail.from}
+            onClose={closeDetail}
             onAlbumSelect={openAlbum}
           />
         )}
-        {page === "podcasts" && <PodcastsPage />}
-        {page === "history" && <HistoryPage />}
-        {page === "datasets" && <DatasetsPage />}
+        {detail?.type === "album" && (
+          <AlbumDetail
+            albumKey={detail.key}
+            onClose={closeDetail}
+            onArtistSelect={openArtist}
+            onTrackSelect={key => openTrack(key, "explore")}
+          />
+        )}
+        {detail?.type === "artist" && (
+          <ArtistDetail
+            artistKey={detail.key}
+            onClose={closeDetail}
+            onAlbumSelect={openAlbum}
+            onTrackSelect={key => openTrack(key, "explore")}
+          />
+        )}
+        {detail === null && page === "dashboard" && <DashboardPage />}
+        {detail === null && page === "explore" && (
+          <ExplorePage
+            onTrackSelect={key => openTrack(key, "explore")}
+            onAlbumSelect={openAlbum}
+            onArtistSelect={openArtist}
+          />
+        )}
+        {detail === null && page === "review" && (
+          <ReviewPage onTrackSelect={key => openTrack(key, "review")} />
+        )}
+        {detail === null && page === "podcasts" && <PodcastsPage />}
+        {detail === null && page === "history" && <HistoryPage />}
+        {detail === null && page === "datasets" && <DatasetsPage />}
       </main>
     </div>
   );

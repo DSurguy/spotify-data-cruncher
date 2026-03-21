@@ -19,13 +19,11 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
-function StarRating({ value }: { value: number | null }) {
-  if (value === null) return <span className="text-muted-foreground">—</span>;
-  return (
-    <span className="text-yellow-500" aria-label={`${value} stars`}>
-      {"★".repeat(value)}{"☆".repeat(5 - value)}
-    </span>
-  );
+function RatingBadge({ value }: { value: "like" | "dislike" | "none" | null }) {
+  if (!value || value === "none") return <span className="text-muted-foreground">—</span>;
+  return value === "like"
+    ? <span className="text-green-600 text-sm">♥</span>
+    : <span className="text-red-500 text-sm">✕</span>;
 }
 
 interface FilterState {
@@ -213,7 +211,7 @@ export function TracksPage({ onTrackSelect }: { onTrackSelect?: (key: string) =>
                 <td className="px-3 py-2 text-right tabular-nums whitespace-nowrap">{formatDuration(track.total_ms_played)}</td>
                 <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{formatDate(track.last_played)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{track.skip_rate}%</td>
-                <td className="px-3 py-2"><StarRating value={track.rating} /></td>
+                <td className="px-3 py-2"><RatingBadge value={track.rating} /></td>
                 <td className="px-3 py-2 text-center">
                   <button
                     aria-label={track.reviewed ? "Mark unreviewed" : "Mark reviewed"}

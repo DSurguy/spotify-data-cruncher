@@ -10,10 +10,13 @@ const sampleTrack = {
   album_name: "The Bends",
   play_count: 47,
   total_ms_played: 14_100_000,
+  first_played: "2020-01-01T00:00:00Z",
   last_played: "2025-03-01T10:00:00Z",
   skip_rate: 8.5,
-  rating: 5,
+  genre: null,
+  rating: null as "like" | "dislike" | "none" | null,
   notes: null,
+  reviewed: false,
 };
 
 function makeResponse(overrides: Partial<GetTracksResponse> = {}): GetTracksResponse {

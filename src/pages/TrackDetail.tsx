@@ -5,6 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import type { GetTrackResponse } from "@/types/api";
 
+type Rating = "like" | "dislike" | "none";
+
 function formatDuration(ms: number): string {
   const h = Math.floor(ms / 3_600_000);
   const m = Math.floor((ms % 3_600_000) / 60_000);
@@ -16,41 +18,63 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
-function StarPicker({ value, onChange }: { value: number | null; onChange: (v: number | null) => void }) {
+function RatingPicker({ value, onChange }: { value: Rating | null; onChange: (v: Rating | null) => void }) {
+  const options: { value: Rating; label: string; activeClass: string }[] = [
+    { value: "like", label: "♥ Like", activeClass: "bg-green-600 text-white border-green-600" },
+    { value: "none", label: "— No opinion", activeClass: "bg-muted text-foreground border-border" },
+    { value: "dislike", label: "✕ Dislike", activeClass: "bg-red-600 text-white border-red-600" },
+  ];
   return (
-    <div className="flex gap-1" role="group" aria-label="Rating">
-      {[1, 2, 3, 4, 5].map(n => (
+    <div className="flex gap-2" role="group" aria-label="Rating">
+      {options.map(opt => (
         <button
-          key={n}
+          key={opt.value}
           type="button"
-          aria-label={`${n} star${n !== 1 ? "s" : ""}`}
-          className={`text-2xl leading-none transition-colors ${n <= (value ?? 0) ? "text-yellow-500" : "text-muted-foreground"}`}
-          onClick={() => onChange(n === value ? null : n)}
+          aria-pressed={value === opt.value}
+          onClick={() => onChange(value === opt.value ? null : opt.value)}
+          className={`px-3 py-1.5 rounded border text-sm transition-colors ${
+            value === opt.value ? opt.activeClass : "border-border text-muted-foreground hover:bg-muted"
+          }`}
         >
-          ★
+          {opt.label}
         </button>
       ))}
     </div>
   );
 }
 
+function RatingDisplay({ value }: { value: Rating | null }) {
+  if (!value || value === "none") return <span className="text-muted-foreground text-sm">No rating</span>;
+  return value === "like"
+    ? <span className="text-green-600 text-sm font-medium">♥ Like</span>
+    : <span className="text-red-500 text-sm font-medium">✕ Dislike</span>;
+}
+
 interface TrackDetailProps {
   trackKey: string;
+  from: "explore" | "review";
   onClose: () => void;
   onAlbumSelect?: (albumKey: string) => void;
 }
 
-export function TrackDetail({ trackKey, onClose, onAlbumSelect }: TrackDetailProps) {
+export function TrackDetail({ trackKey, from, onClose, onAlbumSelect }: TrackDetailProps) {
   const [data, setData] = useState<GetTrackResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [playsPage, setPlaysPage] = useState(1);
 
-  const [rating, setRating] = useState<number | null>(null);
+  // View-mode notes form
   const [genre, setGenre] = useState("");
   const [notes, setNotes] = useState("");
-  const [reviewed, setReviewed] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [viewSaving, setViewSaving] = useState(false);
+  const [viewSaved, setViewSaved] = useState(false);
+
+  // Review mode state
+  const [mode, setMode] = useState<"view" | "review">(from === "review" ? "review" : "view");
+  const [reviewRating, setReviewRating] = useState<Rating | null>(null);
+  const [reviewNotes, setReviewNotes] = useState("");
+  const [reviewGenre, setReviewGenre] = useState("");
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [reviewComplete, setReviewComplete] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -59,36 +83,54 @@ export function TrackDetail({ trackKey, onClose, onAlbumSelect }: TrackDetailPro
       .then((body: GetTrackResponse) => {
         setData(body);
         if (playsPage === 1) {
-          setRating(body.track.rating ?? null);
           setGenre(body.track.genre ?? "");
           setNotes(body.track.notes ?? "");
-          setReviewed(body.track.reviewed);
+          setReviewRating((body.track.rating as Rating | null) ?? null);
+          setReviewNotes(body.track.notes ?? "");
+          setReviewGenre(body.track.genre ?? "");
         }
         setLoading(false);
       });
   }, [trackKey, playsPage]);
 
-  async function saveOverrides() {
-    setSaving(true);
-    setSaved(false);
+  async function saveViewNotes() {
+    setViewSaving(true);
+    setViewSaved(false);
     await fetch(`/api/overrides/track/${encodeURIComponent(trackKey)}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify([
-        { field: "rating",   value: rating !== null ? String(rating) : null },
-        { field: "genre",    value: genre.trim() ? JSON.stringify(genre.trim()) : null },
-        { field: "notes",    value: notes.trim() ? JSON.stringify(notes.trim()) : null },
-        { field: "reviewed", value: reviewed ? "true" : null },
+        { field: "genre", value: genre.trim() ? JSON.stringify(genre.trim()) : null },
+        { field: "notes", value: notes.trim() ? JSON.stringify(notes.trim()) : null },
       ]),
     });
-    setSaving(false);
-    setSaved(true);
+    setViewSaving(false);
+    setViewSaved(true);
   }
+
+  async function completeReview() {
+    if (!reviewRating) return;
+    setReviewSaving(true);
+    await fetch(`/api/overrides/track/${encodeURIComponent(trackKey)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([
+        { field: "rating", value: JSON.stringify(reviewRating) },
+        { field: "genre", value: reviewGenre.trim() ? JSON.stringify(reviewGenre.trim()) : null },
+        { field: "notes", value: reviewNotes.trim() ? JSON.stringify(reviewNotes.trim()) : null },
+        { field: "reviewed", value: "true" },
+      ]),
+    });
+    setReviewSaving(false);
+    setReviewComplete(true);
+  }
+
+  const backLabel = from === "review" ? "← Review" : "← Explore";
 
   if (loading && !data) {
     return (
       <div className="max-w-2xl mx-auto">
-        <Button variant="ghost" size="sm" onClick={onClose}>← Back to Tracks</Button>
+        <Button variant="ghost" size="sm" onClick={onClose}>{backLabel}</Button>
         <p className="mt-6 text-muted-foreground">Loading…</p>
       </div>
     );
@@ -97,7 +139,7 @@ export function TrackDetail({ trackKey, onClose, onAlbumSelect }: TrackDetailPro
   if (!data) {
     return (
       <div className="max-w-2xl mx-auto">
-        <Button variant="ghost" size="sm" onClick={onClose}>← Back to Tracks</Button>
+        <Button variant="ghost" size="sm" onClick={onClose}>{backLabel}</Button>
         <p className="mt-6 text-destructive">Track not found.</p>
       </div>
     );
@@ -108,9 +150,77 @@ export function TrackDetail({ trackKey, onClose, onAlbumSelect }: TrackDetailPro
 
   return (
     <div className="max-w-2xl mx-auto">
-      <Button variant="ghost" size="sm" onClick={onClose} className="mb-4">
-        ← Back to Tracks
-      </Button>
+      <div className="flex items-center justify-between mb-4">
+        <Button variant="ghost" size="sm" onClick={onClose}>{backLabel}</Button>
+        {mode === "view" && (
+          <Button variant="outline" size="sm" onClick={() => { setMode("review"); setReviewComplete(false); }}>
+            Review this track →
+          </Button>
+        )}
+        {mode === "review" && from === "explore" && (
+          <Button variant="ghost" size="sm" onClick={() => setMode("view")}>Exit review mode</Button>
+        )}
+      </div>
+
+      {/* Review mode */}
+      {mode === "review" && (
+        <div className="border-2 border-primary/20 rounded-lg p-5 flex flex-col gap-4 mb-6 bg-primary/5">
+          <h3 className="font-semibold">Review: {track.track_name}</h3>
+          <p className="text-sm text-muted-foreground -mt-2">{track.artist_name}</p>
+
+          {reviewComplete ? (
+            <div className="flex flex-col gap-3">
+              <p className="text-sm font-medium text-green-700">Review complete!</p>
+              <p className="text-sm text-muted-foreground">Review another track?</p>
+              <div className="flex gap-2">
+                <Button onClick={onClose}>Yes, back to Review</Button>
+                <Button variant="outline" onClick={() => { setMode("view"); setReviewComplete(false); }}>
+                  No, stay here
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div>
+                <Label className="mb-2 block">
+                  Rating <span className="text-destructive">*</span>
+                </Label>
+                <RatingPicker value={reviewRating} onChange={setReviewRating} />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="review-genre">Genre <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <Input
+                  id="review-genre"
+                  placeholder="e.g. Indie Rock"
+                  value={reviewGenre}
+                  onChange={e => setReviewGenre(e.target.value)}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="review-notes">Notes <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <Textarea
+                  id="review-notes"
+                  placeholder="Your thoughts on this track…"
+                  rows={3}
+                  value={reviewNotes}
+                  onChange={e => setReviewNotes(e.target.value)}
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Button onClick={completeReview} disabled={reviewSaving || !reviewRating}>
+                  {reviewSaving ? "Saving…" : "Complete Review"}
+                </Button>
+                {!reviewRating && (
+                  <span className="text-xs text-muted-foreground">Rating is required</span>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Header */}
       <div className="mb-6">
@@ -123,59 +233,50 @@ export function TrackDetail({ trackKey, onClose, onAlbumSelect }: TrackDetailPro
           <span>{track.skip_rate}% skip rate</span>
           <span>Last: {formatDate(track.last_played)}</span>
         </div>
+        {track.rating && (
+          <div className="mt-2">
+            <RatingDisplay value={track.rating as Rating | null} />
+          </div>
+        )}
+        {track.reviewed && (
+          <span className="inline-flex items-center gap-1 text-xs text-green-700 mt-1">✓ Reviewed</span>
+        )}
       </div>
 
-      {/* Overrides form */}
-      <div className="border rounded-lg p-5 flex flex-col gap-4 mb-6">
-        <div className="flex items-center justify-between">
+      {/* View-mode notes */}
+      {mode === "view" && (
+        <div className="border rounded-lg p-5 flex flex-col gap-4 mb-6">
           <h3 className="font-semibold text-sm">Your notes</h3>
-          <button
-            type="button"
-            onClick={() => setReviewed(r => !r)}
-            aria-label={reviewed ? "Mark unreviewed" : "Mark reviewed"}
-            className={`flex items-center gap-1.5 text-sm px-2 py-1 rounded border transition-colors ${
-              reviewed
-                ? "bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
-                : "bg-muted border-border text-muted-foreground hover:bg-muted/80"
-            }`}
-          >
-            {reviewed ? "✓ Reviewed" : "○ Not reviewed"}
-          </button>
-        </div>
 
-        <div>
-          <Label className="mb-1.5 block">Rating</Label>
-          <StarPicker value={rating} onChange={setRating} />
-        </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="track-genre">Genre</Label>
+            <Input
+              id="track-genre"
+              placeholder="e.g. Indie Rock"
+              value={genre}
+              onChange={e => setGenre(e.target.value)}
+            />
+          </div>
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="track-genre">Genre</Label>
-          <Input
-            id="track-genre"
-            placeholder="e.g. Indie Rock"
-            value={genre}
-            onChange={e => setGenre(e.target.value)}
-          />
-        </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="track-notes">Notes</Label>
+            <Textarea
+              id="track-notes"
+              placeholder="Your thoughts on this track…"
+              rows={4}
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+            />
+          </div>
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="track-notes">Notes</Label>
-          <Textarea
-            id="track-notes"
-            placeholder="Your thoughts on this track…"
-            rows={4}
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-          />
+          <div className="flex items-center gap-3">
+            <Button onClick={saveViewNotes} disabled={viewSaving}>
+              {viewSaving ? "Saving…" : "Save"}
+            </Button>
+            {viewSaved && <span className="text-sm text-muted-foreground">Saved!</span>}
+          </div>
         </div>
-
-        <div className="flex items-center gap-3">
-          <Button onClick={saveOverrides} disabled={saving}>
-            {saving ? "Saving…" : "Save"}
-          </Button>
-          {saved && <span className="text-sm text-muted-foreground">Saved!</span>}
-        </div>
-      </div>
+      )}
 
       {/* Albums */}
       {albums.length > 0 && (
@@ -248,3 +349,5 @@ export function TrackDetail({ trackKey, onClose, onAlbumSelect }: TrackDetailPro
     </div>
   );
 }
+
+

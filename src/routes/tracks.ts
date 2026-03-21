@@ -68,7 +68,7 @@ export function handleGetTracks(db: Database, req: Request): Response {
   const reviewedParam = p.get("reviewed"); // "true" | "false" | null
   const sort: TrackSort = (p.get("sort") as TrackSort) || "play_count_desc";
   const page = Math.max(1, parseInt(p.get("page") ?? "1", 10));
-  const pageSize = Math.min(200, Math.max(1, parseInt(p.get("page_size") ?? "50", 10)));
+  const pageSize = Math.min(2000, Math.max(1, parseInt(p.get("page_size") ?? "50", 10)));
 
   if (!SORT_CLAUSES[sort]) {
     return new Response("invalid sort value", { status: 400 });

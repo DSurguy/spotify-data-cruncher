@@ -21,7 +21,7 @@ const mockAlbum: Album = {
 beforeEach(() => {
   globalThis.fetch = vi.fn().mockResolvedValue({
     ok: true,
-    json: async () => ({ album: mockAlbum }),
+    json: async () => ({ album: mockAlbum, tracks: [], total: 0, page: 1, page_size: 200 }),
   } as any);
 });
 
@@ -43,13 +43,14 @@ describe("AlbumDetail", () => {
     const onClose = vi.fn();
     render(<AlbumDetail albumKey="you won't like this||wolfs" onClose={onClose} />);
     await waitFor(() => screen.getByText("You Won't Like This"));
-    fireEvent.click(screen.getByRole("button", { name: /Back to Albums/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Explore/ }));
     expect(onClose).toHaveBeenCalled();
   });
 
   it("calls PUT overrides when Save clicked", async () => {
     (globalThis.fetch as any)
       .mockResolvedValueOnce({ ok: true, json: async () => ({ album: mockAlbum }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ tracks: [], total: 0, page: 1, page_size: 200 }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true }) });
 
     render(<AlbumDetail albumKey="you won't like this||wolfs" onClose={() => {}} />);
@@ -61,5 +62,64 @@ describe("AlbumDetail", () => {
     const saveCall = calls[calls.length - 1];
     expect(saveCall[0]).toContain("/api/overrides/album/");
     expect(saveCall[1].method).toBe("PUT");
+  });
+
+  it("calls onArtistSelect when artist name clicked", async () => {
+    const onArtistSelect = vi.fn();
+    render(<AlbumDetail albumKey="you won't like this||wolfs" onClose={() => {}} onArtistSelect={onArtistSelect} />);
+    await waitFor(() => screen.getByText("You Won't Like This"));
+    fireEvent.click(screen.getByRole("button", { name: "Wolfs" }));
+    expect(onArtistSelect).toHaveBeenCalledWith("wolfs");
+  });
+
+  it("shows tracks section with track list", async () => {
+    const mockTrack = {
+      track_key: "spotify:track:aaa",
+      track_name: "Song One",
+      artist_name: "Wolfs",
+      album_name: "You Won't Like This",
+      play_count: 5,
+      total_ms_played: 300_000,
+      first_played: "2022-01-01T00:00:00Z",
+      last_played: "2023-01-01T00:00:00Z",
+      skip_rate: 0,
+      genre: null,
+      rating: null,
+      notes: null,
+      reviewed: false,
+    };
+    (globalThis.fetch as any)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ album: mockAlbum }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ tracks: [mockTrack], total: 1, page: 1, page_size: 200 }) });
+
+    render(<AlbumDetail albumKey="you won't like this||wolfs" onClose={() => {}} />);
+    await waitFor(() => screen.getByText("Song One"));
+  });
+
+  it("calls onTrackSelect when a track is clicked", async () => {
+    const mockTrack = {
+      track_key: "spotify:track:aaa",
+      track_name: "Song One",
+      artist_name: "Wolfs",
+      album_name: "You Won't Like This",
+      play_count: 5,
+      total_ms_played: 300_000,
+      first_played: "2022-01-01T00:00:00Z",
+      last_played: "2023-01-01T00:00:00Z",
+      skip_rate: 0,
+      genre: null,
+      rating: null,
+      notes: null,
+      reviewed: false,
+    };
+    const onTrackSelect = vi.fn();
+    (globalThis.fetch as any)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ album: mockAlbum }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ tracks: [mockTrack], total: 1, page: 1, page_size: 200 }) });
+
+    render(<AlbumDetail albumKey="you won't like this||wolfs" onClose={() => {}} onTrackSelect={onTrackSelect} />);
+    await waitFor(() => screen.getByText("Song One"));
+    fireEvent.click(screen.getByRole("button", { name: "Song One" }));
+    expect(onTrackSelect).toHaveBeenCalledWith("spotify:track:aaa");
   });
 });

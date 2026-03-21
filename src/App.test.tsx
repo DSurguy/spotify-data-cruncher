@@ -20,7 +20,7 @@ beforeEach(() => {
       data = { summary: { total_plays: 0, total_ms_played: 0, unique_tracks: 0, unique_albums: 0, unique_artists: 0, first_played: null, last_played: null } };
     } else {
       // generic fallback covers datasets, albums, artists, tracks, plays, podcasts
-      data = { datasets: [], albums: [], artists: [], tracks: [], plays: [], shows: [], total: 0, page: 1, page_size: 50 };
+      data = { datasets: [], albums: [], artists: [], tracks: [], plays: [], shows: [], total: 0, page: 1, page_size: 50, summary: null };
     }
     return Promise.resolve({ ok: true, json: async () => data } as any);
   });
@@ -32,9 +32,8 @@ describe("App", () => {
     await waitFor(() => expect(screen.getByRole("navigation", { name: "sidebar" })).toBeInTheDocument());
     expect(screen.getByText("Spotify Cruncher")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Dashboard" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Albums" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Artists" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Tracks" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Explore" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Review" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Podcasts" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "History" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Datasets" })).toBeInTheDocument();
