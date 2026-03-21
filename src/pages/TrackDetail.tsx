@@ -1,11 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { TrackReviewCard } from "@/components/TrackReviewCard";
 import type { GetTrackResponse } from "@/types/api";
-
-type Rating = "like" | "dislike" | "none";
 
 function formatDuration(ms: number): string {
   const h = Math.floor(ms / 3_600_000);
@@ -18,57 +14,16 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
-function RatingPicker({ value, onChange }: { value: Rating | null; onChange: (v: Rating | null) => void }) {
-  const options: { value: Rating; label: string; activeClass: string }[] = [
-    { value: "like", label: "♥ Like", activeClass: "bg-green-600 text-white border-green-600" },
-    { value: "none", label: "— No opinion", activeClass: "bg-muted text-foreground border-border" },
-    { value: "dislike", label: "✕ Dislike", activeClass: "bg-red-600 text-white border-red-600" },
-  ];
-  return (
-    <div className="flex gap-2" role="group" aria-label="Rating">
-      {options.map(opt => (
-        <button
-          key={opt.value}
-          type="button"
-          aria-pressed={value === opt.value}
-          onClick={() => onChange(value === opt.value ? null : opt.value)}
-          className={`px-3 py-1.5 rounded border text-sm transition-colors ${
-            value === opt.value ? opt.activeClass : "border-border text-muted-foreground hover:bg-muted"
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function RatingDisplay({ value }: { value: Rating | null }) {
-  if (!value || value === "none") return <span className="text-muted-foreground text-sm">No rating</span>;
-  return value === "like"
-    ? <span className="text-green-600 text-sm font-medium">♥ Like</span>
-    : <span className="text-red-500 text-sm font-medium">✕ Dislike</span>;
-}
-
 interface TrackDetailProps {
   trackKey: string;
-  from: "explore" | "review";
   onClose: () => void;
   onAlbumSelect?: (albumKey: string) => void;
 }
 
-export function TrackDetail({ trackKey, from, onClose, onAlbumSelect }: TrackDetailProps) {
+export function TrackDetail({ trackKey, onClose, onAlbumSelect }: TrackDetailProps) {
   const [data, setData] = useState<GetTrackResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [playsPage, setPlaysPage] = useState(1);
-
-  // Review mode state
-  const [mode, setMode] = useState<"view" | "review">(from === "review" ? "review" : "view");
-  const [reviewRating, setReviewRating] = useState<Rating | null>(null);
-  const [reviewNotes, setReviewNotes] = useState("");
-  const [reviewGenre, setReviewGenre] = useState("");
-  const [reviewSaving, setReviewSaving] = useState(false);
-  const [reviewComplete, setReviewComplete] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -76,38 +31,14 @@ export function TrackDetail({ trackKey, from, onClose, onAlbumSelect }: TrackDet
       .then(r => r.json())
       .then((body: GetTrackResponse) => {
         setData(body);
-        if (playsPage === 1) {
-          setReviewRating((body.track.rating as Rating | null) ?? null);
-          setReviewNotes(body.track.notes ?? "");
-          setReviewGenre(body.track.genre ?? "");
-        }
         setLoading(false);
       });
   }, [trackKey, playsPage]);
 
-  async function completeReview() {
-    if (!reviewRating) return;
-    setReviewSaving(true);
-    await fetch(`/api/overrides/track/${encodeURIComponent(trackKey)}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([
-        { field: "rating", value: JSON.stringify(reviewRating) },
-        { field: "genre", value: reviewGenre.trim() ? JSON.stringify(reviewGenre.trim()) : null },
-        { field: "notes", value: reviewNotes.trim() ? JSON.stringify(reviewNotes.trim()) : null },
-        { field: "reviewed", value: "true" },
-      ]),
-    });
-    setReviewSaving(false);
-    setReviewComplete(true);
-  }
-
-  const backLabel = from === "review" ? "← Review" : "← Explore";
-
   if (loading && !data) {
     return (
       <div className="max-w-2xl mx-auto">
-        <Button variant="ghost" size="sm" onClick={onClose}>{backLabel}</Button>
+        <Button variant="ghost" size="sm" onClick={onClose}>← Explore</Button>
         <p className="mt-6 text-muted-foreground">Loading…</p>
       </div>
     );
@@ -116,7 +47,7 @@ export function TrackDetail({ trackKey, from, onClose, onAlbumSelect }: TrackDet
   if (!data) {
     return (
       <div className="max-w-2xl mx-auto">
-        <Button variant="ghost" size="sm" onClick={onClose}>{backLabel}</Button>
+        <Button variant="ghost" size="sm" onClick={onClose}>← Explore</Button>
         <p className="mt-6 text-destructive">Track not found.</p>
       </div>
     );
@@ -127,72 +58,7 @@ export function TrackDetail({ trackKey, from, onClose, onAlbumSelect }: TrackDet
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <Button variant="ghost" size="sm" onClick={onClose}>{backLabel}</Button>
-        {mode === "review" && from === "explore" && (
-          <Button variant="ghost" size="sm" onClick={() => setMode("view")}>Exit review mode</Button>
-        )}
-      </div>
-
-      {/* Review mode */}
-      {mode === "review" && (
-        <div className="border-2 border-primary/20 rounded-lg p-5 flex flex-col gap-4 mb-6 bg-primary/5">
-          <h3 className="font-semibold">Review: {track.track_name}</h3>
-          <p className="text-sm text-muted-foreground -mt-2">{track.artist_name}</p>
-
-          {reviewComplete ? (
-            <div className="flex flex-col gap-3">
-              <p className="text-sm font-medium text-green-700">Review complete!</p>
-              <p className="text-sm text-muted-foreground">Review another track?</p>
-              <div className="flex gap-2">
-                <Button onClick={onClose}>Yes, back to Review</Button>
-                <Button variant="outline" onClick={() => { setMode("view"); setReviewComplete(false); }}>
-                  No, stay here
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div>
-                <Label className="mb-2 block">
-                  Rating <span className="text-destructive">*</span>
-                </Label>
-                <RatingPicker value={reviewRating} onChange={setReviewRating} />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="review-genre">Genre <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                <Input
-                  id="review-genre"
-                  placeholder="e.g. Indie Rock"
-                  value={reviewGenre}
-                  onChange={e => setReviewGenre(e.target.value)}
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="review-notes">Notes <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                <Textarea
-                  id="review-notes"
-                  placeholder="Your thoughts on this track…"
-                  rows={3}
-                  value={reviewNotes}
-                  onChange={e => setReviewNotes(e.target.value)}
-                />
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Button onClick={completeReview} disabled={reviewSaving || !reviewRating}>
-                  {reviewSaving ? "Saving…" : "Complete Review"}
-                </Button>
-                {!reviewRating && (
-                  <span className="text-xs text-muted-foreground">Rating is required</span>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      )}
+      <Button variant="ghost" size="sm" onClick={onClose} className="mb-4">← Explore</Button>
 
       {/* Header */}
       <div className="mb-6">
@@ -210,34 +76,12 @@ export function TrackDetail({ trackKey, from, onClose, onAlbumSelect }: TrackDet
         )}
       </div>
 
-      {/* Review card */}
-      {mode === "view" && (
-        <div className="border rounded-lg mb-6 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b">
-            <h3 className="font-semibold text-sm">Review</h3>
-            <RatingDisplay value={track.rating as Rating | null} />
-          </div>
-          <div className="px-4 py-3 flex flex-col gap-3">
-            <div>
-              <p className="text-xs text-muted-foreground mb-0.5">Genre</p>
-              <p className="text-sm">{track.genre ?? <span className="text-muted-foreground">—</span>}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-0.5">Notes</p>
-              <p className="text-sm">{track.notes ?? <span className="text-muted-foreground">—</span>}</p>
-            </div>
-          </div>
-          <div className="px-4 py-3 border-t">
-            <button
-              type="button"
-              className="text-sm text-primary hover:underline"
-              onClick={() => { setMode("review"); setReviewComplete(false); }}
-            >
-              Edit Review
-            </button>
-          </div>
-        </div>
-      )}
+      <TrackReviewCard
+        trackKey={trackKey}
+        rating={track.rating as "like" | "dislike" | "none" | null}
+        genre={track.genre}
+        notes={track.notes}
+      />
 
       {/* Albums */}
       {albums.length > 0 && (
@@ -310,5 +154,3 @@ export function TrackDetail({ trackKey, from, onClose, onAlbumSelect }: TrackDet
     </div>
   );
 }
-
-

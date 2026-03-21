@@ -12,7 +12,7 @@ import "./index.css";
 
 type Page = "dashboard" | "explore" | "review" | "podcasts" | "history" | "datasets";
 type DetailView =
-  | { type: "track"; key: string; from: "explore" | "review" }
+  | { type: "track"; key: string }
   | { type: "album"; key: string }
   | { type: "artist"; key: string }
   | null;
@@ -26,8 +26,8 @@ export function App() {
     setDetail(null);
   }
 
-  function openTrack(key: string, from: "explore" | "review") {
-    setDetail({ type: "track", key, from });
+  function openTrack(key: string) {
+    setDetail({ type: "track", key });
   }
 
   function openAlbum(key: string) {
@@ -64,7 +64,6 @@ export function App() {
         {detail?.type === "track" && (
           <TrackDetail
             trackKey={detail.key}
-            from={detail.from}
             onClose={closeDetail}
             onAlbumSelect={openAlbum}
           />
@@ -74,7 +73,7 @@ export function App() {
             albumKey={detail.key}
             onClose={closeDetail}
             onArtistSelect={openArtist}
-            onTrackSelect={key => openTrack(key, "explore")}
+            onTrackSelect={openTrack}
           />
         )}
         {detail?.type === "artist" && (
@@ -82,19 +81,19 @@ export function App() {
             artistKey={detail.key}
             onClose={closeDetail}
             onAlbumSelect={openAlbum}
-            onTrackSelect={key => openTrack(key, "explore")}
+            onTrackSelect={openTrack}
           />
         )}
         {detail === null && page === "dashboard" && <DashboardPage />}
         {detail === null && page === "explore" && (
           <ExplorePage
-            onTrackSelect={key => openTrack(key, "explore")}
+            onTrackSelect={openTrack}
             onAlbumSelect={openAlbum}
             onArtistSelect={openArtist}
           />
         )}
         {detail === null && page === "review" && (
-          <ReviewPage onTrackSelect={key => openTrack(key, "review")} />
+          <ReviewPage onTrackSelect={openTrack} />
         )}
         {detail === null && page === "podcasts" && <PodcastsPage />}
         {detail === null && page === "history" && <HistoryPage />}
