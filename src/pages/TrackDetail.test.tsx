@@ -87,14 +87,14 @@ describe("TrackDetail", () => {
 
   it("shows album in 'Appears on' section", async () => {
     render(<TrackDetail trackKey="spotify:track:abc" onClose={() => {}} />);
-    await waitFor(() => screen.getByRole("button", { name: "OK Computer" }));
+    await waitFor(() => screen.getByRole("button", { name: /OK Computer/ }));
   });
 
   it("calls onAlbumSelect when album is clicked", async () => {
     const onAlbumSelect = vi.fn();
     render(<TrackDetail trackKey="spotify:track:abc" onClose={() => {}} onAlbumSelect={onAlbumSelect} />);
-    await waitFor(() => screen.getByRole("button", { name: "OK Computer" }));
-    fireEvent.click(screen.getByRole("button", { name: "OK Computer" }));
+    await waitFor(() => screen.getByRole("button", { name: /OK Computer/ }));
+    fireEvent.click(screen.getByRole("button", { name: /OK Computer/ }));
     expect(onAlbumSelect).toHaveBeenCalledWith("ok computer||radiohead");
   });
 

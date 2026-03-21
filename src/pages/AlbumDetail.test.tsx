@@ -119,7 +119,7 @@ describe("AlbumDetail", () => {
 
     render(<AlbumDetail albumKey="you won't like this||wolfs" onClose={() => {}} onTrackSelect={onTrackSelect} />);
     await waitFor(() => screen.getByText("Song One"));
-    fireEvent.click(screen.getByRole("button", { name: "Song One" }));
+    fireEvent.click(screen.getByRole("button", { name: /Song One/ }));
     expect(onTrackSelect).toHaveBeenCalledWith("spotify:track:aaa");
   });
 });

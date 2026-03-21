@@ -54,14 +54,19 @@ function ReviewPanel({ panel, data, onRefresh, onTrackSelect }: ReviewPanelProps
               <button
                 key={track.track_key}
                 type="button"
-                className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors ${i > 0 ? "border-t" : ""}`}
+                className={`group w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors ${i > 0 ? "border-t" : ""}`}
                 onClick={() => onTrackSelect(track.track_key)}
               >
-                <div className="font-medium text-sm truncate">{track.track_name}</div>
-                <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
-                  <span className="truncate max-w-[160px]">{track.artist_name}</span>
-                  <span className="shrink-0">{track.play_count} plays</span>
-                  <span className="shrink-0">{formatDuration(track.total_ms_played)}</span>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-sm truncate">{track.track_name}</div>
+                    <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
+                      <span className="truncate max-w-40">{track.artist_name}</span>
+                      <span className="shrink-0">{track.play_count} plays</span>
+                      <span className="shrink-0">{formatDuration(track.total_ms_played)}</span>
+                    </div>
+                  </div>
+                  <span className="opacity-0 group-hover:opacity-100 text-muted-foreground shrink-0 mt-0.5 transition-opacity text-xs" aria-hidden="true">→</span>
                 </div>
               </button>
             ))}

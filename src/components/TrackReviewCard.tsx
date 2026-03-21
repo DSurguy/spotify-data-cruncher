@@ -145,7 +145,7 @@ export function TrackReviewCard({ trackKey, rating: initialRating, genre: initia
         {mode === "view" ? (
           <button
             type="button"
-            className="text-sm text-primary hover:underline"
+            className="text-sm text-primary underline underline-offset-2"
             onClick={openEdit}
           >
             Edit Review
@@ -158,7 +158,7 @@ export function TrackReviewCard({ trackKey, rating: initialRating, genre: initia
             {!editRating && <span className="text-xs text-muted-foreground">Rating is required</span>}
             <button
               type="button"
-              className="text-sm text-muted-foreground hover:underline ml-auto"
+              className="text-sm text-muted-foreground underline underline-offset-2 ml-auto"
               onClick={cancelEdit}
             >
               Cancel

@@ -202,23 +202,20 @@ export function ArtistDetail({ artistKey, onClose, onAlbumSelect, onTrackSelect 
           ) : (
             <div className="border rounded-lg overflow-hidden mb-3">
               {albums.map((album, i) => (
-                <div
+                <button
                   key={album.album_key}
-                  className={`flex items-center gap-3 px-4 py-2 hover:bg-muted/50 ${i > 0 ? "border-t" : ""}`}
+                  type="button"
+                  className={`group flex items-center gap-3 px-4 py-2 hover:bg-muted/50 w-full text-left ${i > 0 ? "border-t" : ""}`}
+                  onClick={() => onAlbumSelect(album.album_key)}
                 >
-                  <button
-                    type="button"
-                    className="flex-1 text-left text-sm font-medium hover:underline truncate"
-                    onClick={() => onAlbumSelect(album.album_key)}
-                  >
-                    {album.album_name}
-                  </button>
+                  <span className="flex-1 text-sm font-medium underline underline-offset-2 truncate min-w-0">{album.album_name}</span>
                   {album.genre && (
                     <span className="text-xs text-muted-foreground hidden sm:block">{album.genre}</span>
                   )}
                   <span className="text-xs text-muted-foreground tabular-nums shrink-0">{formatDuration(album.total_ms_played)}</span>
                   <span className="text-xs text-muted-foreground tabular-nums shrink-0">{album.play_count}×</span>
-                </div>
+                  <span className="opacity-0 group-hover:opacity-100 text-muted-foreground shrink-0 text-xs transition-opacity" aria-hidden="true">→</span>
+                </button>
               ))}
             </div>
           )}
@@ -280,24 +277,21 @@ export function ArtistDetail({ artistKey, onClose, onAlbumSelect, onTrackSelect 
           ) : (
             <div className="border rounded-lg overflow-hidden mb-3">
               {tracks.map((track, i) => (
-                <div
+                <button
                   key={track.track_key}
-                  className={`flex items-center gap-3 px-4 py-2 hover:bg-muted/50 ${i > 0 ? "border-t" : ""}`}
+                  type="button"
+                  className={`group flex items-center gap-3 px-4 py-2 hover:bg-muted/50 w-full text-left ${i > 0 ? "border-t" : ""}`}
+                  onClick={() => onTrackSelect(track.track_key)}
                 >
-                  <button
-                    type="button"
-                    className="flex-1 text-left text-sm font-medium hover:underline truncate"
-                    onClick={() => onTrackSelect(track.track_key)}
-                  >
-                    {track.track_name}
-                  </button>
+                  <span className="flex-1 text-sm font-medium underline underline-offset-2 truncate min-w-0">{track.track_name}</span>
                   {track.album_name && (
                     <span className="text-xs text-muted-foreground truncate max-w-[140px] hidden sm:block">{track.album_name}</span>
                   )}
                   {track.reviewed && <span className="text-xs text-green-600">✓</span>}
                   <span className="text-xs text-muted-foreground tabular-nums shrink-0">{formatDuration(track.total_ms_played)}</span>
                   <span className="text-xs text-muted-foreground tabular-nums shrink-0">{track.play_count}×</span>
-                </div>
+                  <span className="opacity-0 group-hover:opacity-100 text-muted-foreground shrink-0 text-xs transition-opacity" aria-hidden="true">→</span>
+                </button>
               ))}
             </div>
           )}

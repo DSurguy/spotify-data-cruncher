@@ -63,8 +63,8 @@ export function TrackDetail({ trackKey, onClose, onAlbumSelect }: TrackDetailPro
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-2xl font-bold">{track.track_name}</h2>
+        <p className="text-xs text-muted-foreground uppercase tracking-wide mt-1">Artist</p>
         <p className="text-muted-foreground">{track.artist_name}</p>
-        {track.album_name && <p className="text-sm text-muted-foreground">{track.album_name}</p>}
         <div className="flex flex-wrap gap-6 mt-2 text-sm text-muted-foreground">
           <span>{track.play_count} plays</span>
           <span>{formatDuration(track.total_ms_played)}</span>
@@ -89,16 +89,18 @@ export function TrackDetail({ trackKey, onClose, onAlbumSelect }: TrackDetailPro
           <h3 className="font-semibold text-sm mb-2">Appears on</h3>
           <div className="flex flex-col gap-1">
             {albums.map(album => (
-              <div key={album.album_key} className="flex items-center justify-between px-3 py-2 rounded border text-sm">
-                <button
-                  type="button"
-                  className="text-left hover:underline font-medium"
-                  onClick={() => onAlbumSelect?.(album.album_key)}
-                >
-                  {album.album_name || "Unknown Album"}
-                </button>
-                <span className="text-muted-foreground">{album.play_count} plays</span>
-              </div>
+              <button
+                key={album.album_key}
+                type="button"
+                className="group flex items-center justify-between px-3 py-2 rounded border text-sm hover:bg-muted/50 transition-colors w-full text-left"
+                onClick={() => onAlbumSelect?.(album.album_key)}
+              >
+                <span className="font-medium underline underline-offset-2">{album.album_name || "Unknown Album"}</span>
+                <span className="flex items-center gap-2 shrink-0">
+                  <span className="text-muted-foreground">{album.play_count} plays</span>
+                  <span className="opacity-0 group-hover:opacity-100 text-muted-foreground text-xs transition-opacity" aria-hidden="true">→</span>
+                </span>
+              </button>
             ))}
           </div>
         </div>

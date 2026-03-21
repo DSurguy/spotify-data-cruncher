@@ -100,7 +100,7 @@ describe("ArtistDetail", () => {
     const onAlbumSelect = vi.fn();
     render(<ArtistDetail artistKey="radiohead" onClose={() => {}} onAlbumSelect={onAlbumSelect} onTrackSelect={() => {}} />);
     await waitFor(() => screen.getByText("OK Computer"));
-    fireEvent.click(screen.getByRole("button", { name: "OK Computer" }));
+    fireEvent.click(screen.getByRole("button", { name: /OK Computer/ }));
     expect(onAlbumSelect).toHaveBeenCalledWith("ok computer||radiohead");
   });
 
@@ -117,7 +117,7 @@ describe("ArtistDetail", () => {
     await waitFor(() => screen.getByRole("heading", { name: "Radiohead" }));
     fireEvent.click(screen.getByRole("button", { name: /Tracks/ }));
     await waitFor(() => screen.getByText("Paranoid Android"));
-    fireEvent.click(screen.getByRole("button", { name: "Paranoid Android" }));
+    fireEvent.click(screen.getByRole("button", { name: /Paranoid Android/ }));
     expect(onTrackSelect).toHaveBeenCalledWith("spotify:track:paranoid");
   });
 
