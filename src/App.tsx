@@ -41,9 +41,9 @@ export function App() {
   }
 
   return (
-    <div className="flex h-screen bg-background text-foreground">
+    <div className="grid h-screen bg-background text-foreground max-w-6xl w-screen" style={{ gridTemplateColumns: "13rem 1fr" }}>
       {/* Sidebar */}
-      <nav aria-label="sidebar" className="w-52 shrink-0 border-r flex flex-col gap-1 p-3">
+      <nav aria-label="sidebar" className="border-r flex flex-col gap-1 p-3 overflow-y-auto">
         <div className="px-2 py-3 mb-2">
           <h1 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
             Spotify Cruncher
@@ -56,7 +56,8 @@ export function App() {
       </nav>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto p-6">
+      <main className="flex-1 overflow-y-scroll p-6">
+        <div className="w-full max-w-5xl mx-auto">
         {detail?.type === "track" && (
           <TrackDetail
             trackKey={detail.key}
@@ -92,6 +93,7 @@ export function App() {
           <ReviewPage onTrackSelect={openTrack} />
         )}
         {detail === null && page === "datasets" && <DatasetsPage />}
+        </div>
       </main>
     </div>
   );

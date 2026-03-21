@@ -102,7 +102,7 @@ export function ArtistDetail({ artistKey, onClose, onAlbumSelect, onTrackSelect 
 
   if (loading) {
     return (
-      <div className="max-w-3xl mx-auto">
+      <div>
         <Button variant="ghost" size="sm" onClick={onClose}>← Explore</Button>
         <p className="mt-6 text-muted-foreground">Loading…</p>
       </div>
@@ -111,7 +111,7 @@ export function ArtistDetail({ artistKey, onClose, onAlbumSelect, onTrackSelect 
 
   if (!artist) {
     return (
-      <div className="max-w-3xl mx-auto">
+      <div>
         <Button variant="ghost" size="sm" onClick={onClose}>← Explore</Button>
         <p className="mt-6 text-destructive">Artist not found.</p>
       </div>
@@ -122,7 +122,7 @@ export function ArtistDetail({ artistKey, onClose, onAlbumSelect, onTrackSelect 
   const trackTotalPages = Math.ceil(trackTotal / TRACK_PAGE_SIZE);
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div>
       <Button variant="ghost" size="sm" onClick={onClose} className="mb-4">
         ← Explore
       </Button>

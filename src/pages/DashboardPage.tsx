@@ -163,7 +163,7 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div>
       <h2 className="text-2xl font-bold mb-6">Dashboard</h2>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">

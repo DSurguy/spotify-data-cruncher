@@ -112,7 +112,7 @@ export function AlbumDetail({ albumKey, onClose, onArtistSelect, onTrackSelect }
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto">
+      <div>
         <Button variant="ghost" size="sm" onClick={onClose}>← Explore</Button>
         <p className="mt-6 text-muted-foreground">Loading…</p>
       </div>
@@ -121,7 +121,7 @@ export function AlbumDetail({ albumKey, onClose, onArtistSelect, onTrackSelect }
 
   if (!album) {
     return (
-      <div className="max-w-2xl mx-auto">
+      <div>
         <Button variant="ghost" size="sm" onClick={onClose}>← Explore</Button>
         <p className="mt-6 text-destructive">Album not found.</p>
       </div>
@@ -133,7 +133,7 @@ export function AlbumDetail({ albumKey, onClose, onArtistSelect, onTrackSelect }
     : tracks;
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div>
       <Button variant="ghost" size="sm" onClick={onClose} className="mb-4">
         ← Explore
       </Button>

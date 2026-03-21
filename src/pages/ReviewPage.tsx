@@ -103,7 +103,7 @@ export function ReviewPage({ onTrackSelect }: ReviewPageProps) {
   }, []);
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div>
       <div className="mb-6">
         <h2 className="text-2xl font-bold">Review</h2>
         <p className="text-muted-foreground text-sm mt-1">

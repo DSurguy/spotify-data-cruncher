@@ -315,7 +315,7 @@ export function ExplorePage({ onTrackSelect, onAlbumSelect, onArtistSelect }: Ex
   const hasSearch = search.trim().length > 0;
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div>
       <h2 className="text-2xl font-bold mb-6">Explore</h2>
 
       {/* Controls */}
