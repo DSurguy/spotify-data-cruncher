@@ -113,11 +113,47 @@ describe("handleGetTracks", () => {
 
   it("includes override fields (rating, notes)", async () => {
     db.run(`INSERT INTO metadata_overrides (entity_type, entity_key, field, value, updated_at)
-      VALUES ('track', 'spotify:track:aaa', 'rating', '5', '2024-01-01T00:00:00Z')`);
+      VALUES ('track', 'spotify:track:aaa', 'rating', '"like"', '2024-01-01T00:00:00Z')`);
     const res = handleGetTracks(db, makeReq("/api/tracks"));
     const body = await res.json();
     const a = body.tracks.find((t: any) => t.track_name === "Track A");
-    expect(a.rating).toBe(5);
+    expect(a.rating).toBe("like");
+  });
+
+  it("includes genre override field", async () => {
+    db.run(`INSERT INTO metadata_overrides (entity_type, entity_key, field, value, updated_at)
+      VALUES ('track', 'spotify:track:aaa', 'genre', '"Indie Rock"', '2024-01-01T00:00:00Z')`);
+    const res = handleGetTracks(db, makeReq("/api/tracks"));
+    const body = await res.json();
+    const a = body.tracks.find((t: any) => t.track_name === "Track A");
+    expect(a.genre).toBe("Indie Rock");
+  });
+
+  it("includes first_played field", async () => {
+    const res = handleGetTracks(db, makeReq("/api/tracks"));
+    const body = await res.json();
+    const a = body.tracks.find((t: any) => t.track_name === "Track A");
+    expect(a.first_played).toBe("2024-01-01T10:00:00Z");
+  });
+
+  it("sort=first_played_asc orders by first play date ascending", async () => {
+    const res = handleGetTracks(db, makeReq("/api/tracks?sort=first_played_asc"));
+    const body = await res.json();
+    expect(body.tracks[0].track_name).toBe("Track A"); // Track A first played 2024-01-01
+  });
+
+  it("sort=play_count_asc orders by play count ascending", async () => {
+    const res = handleGetTracks(db, makeReq("/api/tracks?sort=play_count_asc"));
+    const body = await res.json();
+    // Track B and C have 1 play each, Track A has 2
+    expect(body.tracks[body.tracks.length - 1].track_name).toBe("Track A");
+  });
+
+  it("sort=random returns all tracks", async () => {
+    const res = handleGetTracks(db, makeReq("/api/tracks?sort=random"));
+    const body = await res.json();
+    expect(body.total).toBe(3);
+    expect(body.tracks).toHaveLength(3);
   });
 
   it("reviewed defaults to false when no override", async () => {
@@ -206,11 +242,17 @@ describe("handleGetTrack", () => {
 
   it("includes override fields", async () => {
     db.run(`INSERT INTO metadata_overrides (entity_type, entity_key, field, value, updated_at)
-      VALUES ('track', 'spotify:track:aaa', 'rating', '5', '2024-01-01T00:00:00Z'),
+      VALUES ('track', 'spotify:track:aaa', 'rating', '"like"', '2024-01-01T00:00:00Z'),
              ('track', 'spotify:track:aaa', 'genre', '"Indie"', '2024-01-01T00:00:00Z')`);
     const res = handleGetTrack(db, makeReq("/api/tracks/spotify%3Atrack%3Aaaa"), "spotify:track:aaa");
     const body = await res.json();
-    expect(body.track.rating).toBe(5);
+    expect(body.track.rating).toBe("like");
     expect(body.track.genre).toBe("Indie");
+  });
+
+  it("includes first_played field", async () => {
+    const res = handleGetTrack(db, makeReq("/api/tracks/spotify%3Atrack%3Aaaa"), "spotify:track:aaa");
+    const body = await res.json();
+    expect(body.track.first_played).toBe("2024-01-01T10:00:00Z");
   });
 });

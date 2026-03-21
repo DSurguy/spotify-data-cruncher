@@ -4,18 +4,26 @@ import type { Track, GetTracksResponse, TrackDetail, GetTrackResponse } from "..
 type TrackSort =
   | "name_asc"
   | "play_count_desc"
+  | "play_count_asc"
   | "total_ms_desc"
   | "last_played_desc"
+  | "first_played_asc"
+  | "first_played_desc"
   | "skip_rate_desc"
-  | "rating_desc";
+  | "rating_desc"
+  | "random";
 
 const SORT_CLAUSES: Record<TrackSort, string> = {
   name_asc: "track_name ASC",
   play_count_desc: "play_count DESC",
+  play_count_asc: "play_count ASC",
   total_ms_desc: "total_ms_played DESC",
   last_played_desc: "last_played DESC",
+  first_played_asc: "first_played ASC",
+  first_played_desc: "first_played DESC",
   skip_rate_desc: "skip_rate DESC",
-  rating_desc: "COALESCE(rating, 0) DESC",
+  rating_desc: "rating DESC",
+  random: "RANDOM()",
 };
 
 interface TrackRow {
@@ -25,8 +33,10 @@ interface TrackRow {
   album_name: string | null;
   play_count: number;
   total_ms_played: number;
+  first_played: string;
   last_played: string;
   skipped_count: number;
+  genre: string | null;
   rating: string | null;
   notes: string | null;
   reviewed_raw: string | null;
@@ -84,8 +94,13 @@ export function handleGetTracks(db: Database, req: Request): Response {
       p.album_name,
       COUNT(*) AS play_count,
       SUM(p.ms_played) AS total_ms_played,
+      MIN(p.ts) AS first_played,
       MAX(p.ts) AS last_played,
       SUM(CASE WHEN p.skipped = 1 THEN 1 ELSE 0 END) AS skipped_count,
+      (SELECT o.value FROM metadata_overrides o
+        WHERE o.entity_type = 'track'
+          AND o.entity_key = (${trackKeySql})
+          AND o.field = 'genre' LIMIT 1) AS genre,
       (SELECT o.value FROM metadata_overrides o
         WHERE o.entity_type = 'track'
           AND o.entity_key = (${trackKeySql})
@@ -134,9 +149,11 @@ export function handleGetTracks(db: Database, req: Request): Response {
     album_name: r.album_name,
     play_count: r.play_count,
     total_ms_played: r.total_ms_played,
+    first_played: r.first_played,
     last_played: r.last_played,
     skip_rate: Math.round((r.skip_rate ?? 0) * 10) / 10,
-    rating: parseOverrideValue(r.rating) as number | null,
+    genre: parseOverrideValue(r.genre) as string | null,
+    rating: parseOverrideValue(r.rating) as "like" | "dislike" | "none" | null,
     notes: parseOverrideValue(r.notes) as string | null,
     reviewed: r.reviewed_raw === "true",
   }));
@@ -160,6 +177,7 @@ export function handleGetTrack(db: Database, _req: Request, key: string): Respon
     album_name: string | null;
     play_count: number;
     total_ms_played: number;
+    first_played: string;
     last_played: string;
     skipped_count: number;
     skip_rate: number;
@@ -177,6 +195,7 @@ export function handleGetTrack(db: Database, _req: Request, key: string): Respon
       p.album_name,
       COUNT(*) AS play_count,
       SUM(p.ms_played) AS total_ms_played,
+      MIN(p.ts) AS first_played,
       MAX(p.ts) AS last_played,
       SUM(CASE WHEN p.skipped = 1 THEN 1 ELSE 0 END) AS skipped_count,
       CAST(SUM(CASE WHEN p.skipped = 1 THEN 1 ELSE 0 END) AS REAL) / COUNT(*) * 100 AS skip_rate,
@@ -256,11 +275,12 @@ export function handleGetTrack(db: Database, _req: Request, key: string): Respon
     album_name: trackRow.album_name,
     play_count: trackRow.play_count,
     total_ms_played: trackRow.total_ms_played,
+    first_played: trackRow.first_played,
     last_played: trackRow.last_played,
     skip_rate: Math.round((trackRow.skip_rate ?? 0) * 10) / 10,
     skipped_count: trackRow.skipped_count,
     genre: parseOverrideValue(trackRow.genre) as string | null,
-    rating: parseOverrideValue(trackRow.rating) as number | null,
+    rating: parseOverrideValue(trackRow.rating) as "like" | "dislike" | "none" | null,
     notes: parseOverrideValue(trackRow.notes) as string | null,
     reviewed: trackRow.reviewed_raw === "true",
   };

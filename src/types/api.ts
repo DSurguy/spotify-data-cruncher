@@ -107,9 +107,11 @@ export interface Track {
   album_name: string | null;
   play_count: number;
   total_ms_played: number;
+  first_played: string;
   last_played: string;
   skip_rate: number;           // 0–100 (percentage)
-  rating: number | null;
+  genre: string | null;
+  rating: "like" | "dislike" | "none" | null;
   notes: string | null;
   reviewed: boolean;
 }
@@ -128,11 +130,12 @@ export interface TrackDetail {
   album_name: string | null;
   play_count: number;
   total_ms_played: number;
+  first_played: string;
   last_played: string;
   skip_rate: number;
   skipped_count: number;
   genre: string | null;
-  rating: number | null;
+  rating: "like" | "dislike" | "none" | null;
   notes: string | null;
   reviewed: boolean;
 }
