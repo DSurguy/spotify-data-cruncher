@@ -154,7 +154,7 @@ export function TrackDetail({ trackKey, from, onClose, onAlbumSelect }: TrackDet
         <Button variant="ghost" size="sm" onClick={onClose}>{backLabel}</Button>
         {mode === "view" && (
           <Button variant="outline" size="sm" onClick={() => { setMode("review"); setReviewComplete(false); }}>
-            Review this track →
+            {track.reviewed ? "Edit Review" : "Review this track →"}
           </Button>
         )}
         {mode === "review" && from === "explore" && (
@@ -233,11 +233,6 @@ export function TrackDetail({ trackKey, from, onClose, onAlbumSelect }: TrackDet
           <span>{track.skip_rate}% skip rate</span>
           <span>Last: {formatDate(track.last_played)}</span>
         </div>
-        {track.rating && (
-          <div className="mt-2">
-            <RatingDisplay value={track.rating as Rating | null} />
-          </div>
-        )}
         {track.reviewed && (
           <span className="inline-flex items-center gap-1 text-xs text-green-700 mt-1">✓ Reviewed</span>
         )}
@@ -247,6 +242,11 @@ export function TrackDetail({ trackKey, from, onClose, onAlbumSelect }: TrackDet
       {mode === "view" && (
         <div className="border rounded-lg p-5 flex flex-col gap-4 mb-6">
           <h3 className="font-semibold text-sm">Your notes</h3>
+
+          <div>
+            <Label className="mb-1.5 block">Rating</Label>
+            <RatingDisplay value={track.rating as Rating | null} />
+          </div>
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="track-genre">Genre</Label>

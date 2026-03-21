@@ -72,6 +72,32 @@ describe("TrackDetail", () => {
     expect(screen.getByRole("button", { name: /Review this track/ })).toBeInTheDocument();
   });
 
+  it("shows rating in view-mode notes section", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ...mockTrackResponse,
+        track: { ...mockTrackResponse.track, rating: "like", reviewed: true },
+      }),
+    } as any);
+    render(<TrackDetail trackKey="spotify:track:abc" from="explore" onClose={() => {}} />);
+    await waitFor(() => screen.getByLabelText("Genre"));
+    expect(screen.getByText("♥ Like")).toBeInTheDocument();
+  });
+
+  it("shows 'Edit Review' button when track is already reviewed", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ...mockTrackResponse,
+        track: { ...mockTrackResponse.track, rating: "like", reviewed: true },
+      }),
+    } as any);
+    render(<TrackDetail trackKey="spotify:track:abc" from="explore" onClose={() => {}} />);
+    await waitFor(() => screen.getByRole("button", { name: "Edit Review" }));
+    expect(screen.queryByRole("button", { name: /Review this track/ })).not.toBeInTheDocument();
+  });
+
   it("starts in review mode when from=review", async () => {
     render(<TrackDetail trackKey="spotify:track:abc" from="review" onClose={() => {}} />);
     await waitFor(() => screen.getByRole("group", { name: "Rating" }));
