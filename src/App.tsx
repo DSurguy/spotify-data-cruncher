@@ -2,15 +2,13 @@ import { useState } from "react";
 import { DatasetsPage } from "./pages/DatasetsPage";
 import { AlbumDetail } from "./pages/AlbumDetail";
 import { DashboardPage } from "./pages/DashboardPage";
-import { HistoryPage } from "./pages/HistoryPage";
 import { ArtistDetail } from "./pages/ArtistDetail";
 import { TrackDetail } from "./pages/TrackDetail";
-import { PodcastsPage } from "./pages/PodcastsPage";
 import { ExplorePage } from "./pages/ExplorePage";
 import { ReviewPage } from "./pages/ReviewPage";
 import "./index.css";
 
-type Page = "dashboard" | "explore" | "review" | "podcasts" | "history" | "datasets";
+type Page = "dashboard" | "explore" | "review" | "datasets";
 type DetailView =
   | { type: "track"; key: string }
   | { type: "album"; key: string }
@@ -54,8 +52,6 @@ export function App() {
         <NavItem label="Dashboard" active={page === "dashboard" && detail === null} onClick={() => navigateTo("dashboard")} />
         <NavItem label="Explore"   active={page === "explore"}   onClick={() => navigateTo("explore")} />
         <NavItem label="Review"    active={page === "review"}    onClick={() => navigateTo("review")} />
-        <NavItem label="Podcasts"  active={page === "podcasts" && detail === null}  onClick={() => navigateTo("podcasts")} />
-        <NavItem label="History"   active={page === "history" && detail === null}   onClick={() => navigateTo("history")} />
         <NavItem label="Datasets"  active={page === "datasets" && detail === null}  onClick={() => navigateTo("datasets")} />
       </nav>
 
@@ -95,8 +91,6 @@ export function App() {
         {detail === null && page === "review" && (
           <ReviewPage onTrackSelect={openTrack} />
         )}
-        {detail === null && page === "podcasts" && <PodcastsPage />}
-        {detail === null && page === "history" && <HistoryPage />}
         {detail === null && page === "datasets" && <DatasetsPage />}
       </main>
     </div>

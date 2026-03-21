@@ -34,8 +34,6 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Dashboard" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Explore" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Review" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Podcasts" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "History" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Datasets" })).toBeInTheDocument();
   });
 
