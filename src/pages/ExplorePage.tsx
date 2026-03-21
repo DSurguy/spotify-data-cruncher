@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { LinkButton, NavLabel } from "@/components/ui/link-button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Track, GetTracksResponse } from "@/types/api";
 
@@ -124,13 +125,12 @@ interface TrackRowProps {
 
 function TrackRow({ track, onSelect, hideArtist, hideAlbum, indent = 0 }: TrackRowProps) {
   return (
-    <button
-      type="button"
-      className="group flex items-center gap-2 py-1.5 hover:bg-muted/40 rounded-md w-full text-left"
+    <LinkButton
+      className="gap-2 py-1.5 hover:bg-muted/40 rounded-md"
       style={{ paddingLeft: `${indent + 12}px`, paddingRight: "12px" }}
       onClick={onSelect}
     >
-      <span className="truncate flex-1 text-sm min-w-0 font-medium underline underline-offset-2">{track.track_name}</span>
+      <NavLabel className="truncate flex-1 text-sm min-w-0 font-medium">{track.track_name}</NavLabel>
       {!hideArtist && (
         <span className="text-xs text-muted-foreground truncate max-w-[120px] hidden sm:block">{track.artist_name}</span>
       )}
@@ -141,8 +141,7 @@ function TrackRow({ track, onSelect, hideArtist, hideAlbum, indent = 0 }: TrackR
       {track.reviewed && <span className="text-xs text-green-600" title="Reviewed">✓</span>}
       <span className="text-xs text-muted-foreground tabular-nums shrink-0">{formatDuration(track.total_ms_played)}</span>
       <span className="text-xs text-muted-foreground tabular-nums shrink-0">{track.play_count}×</span>
-      <span className="opacity-0 group-hover:opacity-100 text-muted-foreground shrink-0 text-xs transition-opacity" aria-hidden="true">→</span>
-    </button>
+    </LinkButton>
   );
 }
 

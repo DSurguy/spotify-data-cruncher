@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { LinkButton, NavLabel } from "@/components/ui/link-button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -225,17 +226,15 @@ export function AlbumDetail({ albumKey, onClose, onArtistSelect, onTrackSelect }
         ) : (
           <div className="border rounded-lg overflow-hidden">
             {filteredTracks.map((track, i) => (
-              <button
+              <LinkButton
                 key={track.track_key}
-                type="button"
-                className={`group flex items-center gap-3 px-4 py-2 hover:bg-muted/50 w-full text-left ${i > 0 ? "border-t" : ""}`}
+                className={`gap-3 px-4 py-2 hover:bg-muted/50 ${i > 0 ? "border-t" : ""}`}
                 onClick={() => onTrackSelect?.(track.track_key)}
               >
-                <span className="flex-1 text-sm font-medium underline underline-offset-2 truncate min-w-0">{track.track_name}</span>
+                <NavLabel className="flex-1 text-sm font-medium truncate min-w-0">{track.track_name}</NavLabel>
                 {track.reviewed && <span className="text-xs text-green-600">✓</span>}
                 <span className="text-xs text-muted-foreground tabular-nums shrink-0">{track.play_count}×</span>
-                <span className="opacity-0 group-hover:opacity-100 text-muted-foreground shrink-0 text-xs transition-opacity" aria-hidden="true">→</span>
-              </button>
+              </LinkButton>
             ))}
           </div>
         )}

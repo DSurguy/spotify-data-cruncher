@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { LinkButton, NavLabel } from "@/components/ui/link-button";
 import type { Track, GetTracksResponse } from "@/types/api";
 
 function formatDuration(ms: number): string {
@@ -51,24 +52,21 @@ function ReviewPanel({ panel, data, onRefresh, onTrackSelect }: ReviewPanelProps
         ) : (
           <div>
             {data.tracks.map((track, i) => (
-              <button
+              <LinkButton
                 key={track.track_key}
-                type="button"
-                className={`group w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors ${i > 0 ? "border-t" : ""}`}
+                className={`px-4 py-3 hover:bg-muted/50 transition-colors gap-2 ${i > 0 ? "border-t" : ""}`}
+                arrowPlacement="top"
                 onClick={() => onTrackSelect(track.track_key)}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium text-sm truncate">{track.track_name}</div>
-                    <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
-                      <span className="truncate max-w-40">{track.artist_name}</span>
-                      <span className="shrink-0">{track.play_count} plays</span>
-                      <span className="shrink-0">{formatDuration(track.total_ms_played)}</span>
-                    </div>
+                <div className="min-w-0 flex-1">
+                  <NavLabel className="font-medium text-sm truncate block">{track.track_name}</NavLabel>
+                  <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
+                    <span className="truncate max-w-40">{track.artist_name}</span>
+                    <span className="shrink-0">{track.play_count} plays</span>
+                    <span className="shrink-0">{formatDuration(track.total_ms_played)}</span>
                   </div>
-                  <span className="opacity-0 group-hover:opacity-100 text-muted-foreground shrink-0 mt-0.5 transition-opacity text-xs" aria-hidden="true">→</span>
                 </div>
-              </button>
+              </LinkButton>
             ))}
           </div>
         )}

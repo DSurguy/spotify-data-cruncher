@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { LinkButton, NavLabel } from "@/components/ui/link-button";
 import { TrackReviewCard } from "@/components/TrackReviewCard";
 import type { GetTrackResponse } from "@/types/api";
 
@@ -101,18 +102,14 @@ export function TrackDetail({ trackKey, onClose, onAlbumSelect, onArtistSelect }
           <h3 className="font-semibold text-sm mb-2">Appears on</h3>
           <div className="flex flex-col gap-1">
             {albums.map(album => (
-              <button
+              <LinkButton
                 key={album.album_key}
-                type="button"
-                className="group flex items-center justify-between px-3 py-2 rounded border text-sm hover:bg-muted/50 transition-colors w-full text-left"
+                className="gap-2 px-3 py-2 rounded border text-sm hover:bg-muted/50 transition-colors"
                 onClick={() => onAlbumSelect?.(album.album_key)}
               >
-                <span className="font-medium underline underline-offset-2">{album.album_name || "Unknown Album"}</span>
-                <span className="flex items-center gap-2 shrink-0">
-                  <span className="text-muted-foreground">{album.play_count} plays</span>
-                  <span className="opacity-0 group-hover:opacity-100 text-muted-foreground text-xs transition-opacity" aria-hidden="true">→</span>
-                </span>
-              </button>
+                <NavLabel className="font-medium flex-1">{album.album_name || "Unknown Album"}</NavLabel>
+                <span className="text-muted-foreground text-sm shrink-0">{album.play_count} plays</span>
+              </LinkButton>
             ))}
           </div>
         </div>
