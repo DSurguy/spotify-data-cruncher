@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useParams } from "wouter";
 import { Button } from "@/components/ui/button";
 import { LinkButton, NavLabel } from "@/components/ui/link-button";
 import { Input } from "@/components/ui/input";
@@ -19,14 +20,9 @@ function formatDate(iso: string): string {
 type AlbumSort = "total_ms_desc" | "play_count_desc" | "name_asc" | "last_played_desc";
 type TrackSort = "total_ms_desc" | "play_count_desc" | "name_asc" | "last_played_desc";
 
-interface ArtistDetailProps {
-  artistKey: string;
-  onClose: () => void;
-  onAlbumSelect: (key: string) => void;
-  onTrackSelect: (key: string) => void;
-}
-
-export function ArtistDetail({ artistKey, onClose, onAlbumSelect, onTrackSelect }: ArtistDetailProps) {
+export function ArtistDetail() {
+  const { key } = useParams<{ key: string }>();
+  const artistKey = decodeURIComponent(key);
   const [artist, setArtist] = useState<Artist | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"albums" | "tracks">("albums");
@@ -104,7 +100,7 @@ export function ArtistDetail({ artistKey, onClose, onAlbumSelect, onTrackSelect 
   if (loading) {
     return (
       <div>
-        <Button variant="ghost" size="sm" onClick={onClose}>← Explore</Button>
+        <Button variant="ghost" size="sm" onClick={() => window.history.back()}>← Back</Button>
         <p className="mt-6 text-muted-foreground">Loading…</p>
       </div>
     );
@@ -113,7 +109,7 @@ export function ArtistDetail({ artistKey, onClose, onAlbumSelect, onTrackSelect 
   if (!artist) {
     return (
       <div>
-        <Button variant="ghost" size="sm" onClick={onClose}>← Explore</Button>
+        <Button variant="ghost" size="sm" onClick={() => window.history.back()}>← Back</Button>
         <p className="mt-6 text-destructive">Artist not found.</p>
       </div>
     );
@@ -124,8 +120,8 @@ export function ArtistDetail({ artistKey, onClose, onAlbumSelect, onTrackSelect 
 
   return (
     <div>
-      <Button variant="ghost" size="sm" onClick={onClose} className="mb-4">
-        ← Explore
+      <Button variant="ghost" size="sm" onClick={() => window.history.back()} className="mb-4">
+        ← Back
       </Button>
 
       {/* Header */}
@@ -205,8 +201,8 @@ export function ArtistDetail({ artistKey, onClose, onAlbumSelect, onTrackSelect 
               {albums.map((album, i) => (
                 <LinkButton
                   key={album.album_key}
+                  href={`/albums/${encodeURIComponent(album.album_key)}`}
                   className={`gap-3 px-4 py-2 hover:bg-muted/50 ${i > 0 ? "border-t" : ""}`}
-                  onClick={() => onAlbumSelect(album.album_key)}
                 >
                   <NavLabel className="flex-1 text-sm font-medium truncate min-w-0">{album.album_name}</NavLabel>
                   {album.genre && (
@@ -278,8 +274,8 @@ export function ArtistDetail({ artistKey, onClose, onAlbumSelect, onTrackSelect 
               {tracks.map((track, i) => (
                 <LinkButton
                   key={track.track_key}
+                  href={`/tracks/${encodeURIComponent(track.track_key)}`}
                   className={`gap-3 px-4 py-2 hover:bg-muted/50 ${i > 0 ? "border-t" : ""}`}
-                  onClick={() => onTrackSelect(track.track_key)}
                 >
                   <NavLabel className="flex-1 text-sm font-medium truncate min-w-0">{track.track_name}</NavLabel>
                   {track.album_name && (

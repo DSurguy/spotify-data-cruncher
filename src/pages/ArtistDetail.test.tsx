@@ -1,10 +1,12 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { ArtistDetail } from "./ArtistDetail";
+import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
+import { Router, Route } from "wouter";import { memoryLocation } from "wouter/memory-location";import { ArtistDetail } from "./ArtistDetail";
 import type { Artist, GetAlbumsResponse, GetTracksResponse } from "@/types/api";
 
+const ARTIST_KEY = "radiohead";
+
 const mockArtist: Artist = {
-  artist_key: "radiohead",
+  artist_key: ARTIST_KEY,
   artist_name: "Radiohead",
   play_count: 200,
   total_ms_played: 60_000_000,
@@ -62,6 +64,15 @@ const mockTracksResponse: GetTracksResponse = {
   page_size: 50,
 };
 
+function renderDetail(artistKey = ARTIST_KEY) {
+  const { hook } = memoryLocation({ path: `/artists/${encodeURIComponent(artistKey)}` });
+  return render(
+    <Router hook={hook}>
+      <Route path="/artists/:key"><ArtistDetail /></Route>
+    </Router>
+  );
+}
+
 beforeEach(() => {
   globalThis.fetch = vi.fn().mockImplementation((url: string) => {
     if (url.includes("/api/artists/")) {
@@ -74,51 +85,51 @@ beforeEach(() => {
   });
 });
 
+afterEach(() => {
+  window.history.replaceState({}, "", "/");
+});
+
 describe("ArtistDetail", () => {
   it("renders artist name and stats after loading", async () => {
-    render(<ArtistDetail artistKey="radiohead" onClose={() => {}} onAlbumSelect={() => {}} onTrackSelect={() => {}} />);
+    renderDetail();
     await waitFor(() => screen.getByRole("heading", { name: "Radiohead" }));
     expect(screen.getByText("200 plays")).toBeInTheDocument();
     expect(screen.getByText("5 albums")).toBeInTheDocument();
     expect(screen.getAllByText("Alternative").length).toBeGreaterThan(0);
   });
 
-  it("shows breadcrumb back to Explore", async () => {
-    const onClose = vi.fn();
-    render(<ArtistDetail artistKey="radiohead" onClose={onClose} onAlbumSelect={() => {}} onTrackSelect={() => {}} />);
+  it("shows back button", async () => {
+    renderDetail();
     await waitFor(() => screen.getByRole("heading", { name: "Radiohead" }));
-    fireEvent.click(screen.getByRole("button", { name: /Explore/ }));
-    expect(onClose).toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /Back/ })).toBeInTheDocument();
   });
 
   it("shows albums tab by default with album rows", async () => {
-    render(<ArtistDetail artistKey="radiohead" onClose={() => {}} onAlbumSelect={() => {}} onTrackSelect={() => {}} />);
+    renderDetail();
     await waitFor(() => screen.getByText("OK Computer"));
   });
 
-  it("calls onAlbumSelect when an album is clicked", async () => {
-    const onAlbumSelect = vi.fn();
-    render(<ArtistDetail artistKey="radiohead" onClose={() => {}} onAlbumSelect={onAlbumSelect} onTrackSelect={() => {}} />);
-    await waitFor(() => screen.getByText("OK Computer"));
-    fireEvent.click(screen.getByRole("button", { name: /OK Computer/ }));
-    expect(onAlbumSelect).toHaveBeenCalledWith("ok computer||radiohead");
+  it("album link has correct href", async () => {
+    renderDetail();
+    await waitFor(() => screen.getByRole("link", { name: /OK Computer/ }));
+    const link = screen.getByRole("link", { name: /OK Computer/ });
+    expect(link.getAttribute("href")).toBe(`/albums/${encodeURIComponent("ok computer||radiohead")}`);
   });
 
   it("switches to tracks tab and shows tracks", async () => {
-    render(<ArtistDetail artistKey="radiohead" onClose={() => {}} onAlbumSelect={() => {}} onTrackSelect={() => {}} />);
+    renderDetail();
     await waitFor(() => screen.getByRole("heading", { name: "Radiohead" }));
     fireEvent.click(screen.getByRole("button", { name: /Tracks/ }));
     await waitFor(() => screen.getByText("Paranoid Android"));
   });
 
-  it("calls onTrackSelect when a track is clicked", async () => {
-    const onTrackSelect = vi.fn();
-    render(<ArtistDetail artistKey="radiohead" onClose={() => {}} onAlbumSelect={() => {}} onTrackSelect={onTrackSelect} />);
+  it("track link has correct href", async () => {
+    renderDetail();
     await waitFor(() => screen.getByRole("heading", { name: "Radiohead" }));
     fireEvent.click(screen.getByRole("button", { name: /Tracks/ }));
-    await waitFor(() => screen.getByText("Paranoid Android"));
-    fireEvent.click(screen.getByRole("button", { name: /Paranoid Android/ }));
-    expect(onTrackSelect).toHaveBeenCalledWith("spotify:track:paranoid");
+    await waitFor(() => screen.getByRole("link", { name: /Paranoid Android/ }));
+    const link = screen.getByRole("link", { name: /Paranoid Android/ });
+    expect(link.getAttribute("href")).toBe(`/tracks/${encodeURIComponent("spotify:track:paranoid")}`);
   });
 
   it("shows 404 state for unknown artist", async () => {
@@ -127,7 +138,7 @@ describe("ArtistDetail", () => {
       status: 404,
       json: async () => null,
     } as any);
-    render(<ArtistDetail artistKey="unknown-key" onClose={() => {}} onAlbumSelect={() => {}} onTrackSelect={() => {}} />);
+    renderDetail("unknown-key");
     await waitFor(() => screen.getByText("Artist not found."));
   });
 });

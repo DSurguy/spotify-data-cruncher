@@ -1,5 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "bun:test";
+import { Router } from "wouter";
+import { memoryLocation } from "wouter/memory-location";
 import { ExplorePage } from "./ExplorePage";
 import type { GetTracksResponse } from "@/types/api";
 
@@ -30,9 +32,14 @@ beforeEach(() => {
   } as any);
 });
 
+function renderPage() {
+  const { hook } = memoryLocation({ path: "/explore" });
+  return render(<Router hook={hook}><ExplorePage /></Router>);
+}
+
 describe("ExplorePage", () => {
   it("renders heading and controls", async () => {
-    render(<ExplorePage onTrackSelect={() => {}} onAlbumSelect={() => {}} onArtistSelect={() => {}} />);
+    renderPage();
     await waitFor(() => screen.getByRole("heading", { name: "Explore" }));
     expect(screen.getByPlaceholderText("Track, artist, or album…")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Search" })).toBeInTheDocument();
@@ -42,7 +49,7 @@ describe("ExplorePage", () => {
   });
 
   it("shows flat track list after loading", async () => {
-    render(<ExplorePage onTrackSelect={() => {}} onAlbumSelect={() => {}} onArtistSelect={() => {}} />);
+    renderPage();
     await waitFor(() => screen.getByText("Fake Plastic Trees"));
     expect(screen.getByText("Radiohead")).toBeInTheDocument();
   });
@@ -52,16 +59,15 @@ describe("ExplorePage", () => {
       ok: true,
       json: async () => makeTracksResponse({ tracks: [], total: 0 }),
     } as any);
-    render(<ExplorePage onTrackSelect={() => {}} onAlbumSelect={() => {}} onArtistSelect={() => {}} />);
+    renderPage();
     await waitFor(() => screen.getByText("No tracks found."));
   });
 
-  it("calls onTrackSelect when track row is clicked", async () => {
-    const onTrackSelect = vi.fn();
-    render(<ExplorePage onTrackSelect={onTrackSelect} onAlbumSelect={() => {}} onArtistSelect={() => {}} />);
-    await waitFor(() => screen.getByText("Fake Plastic Trees"));
-    fireEvent.click(screen.getByText("Fake Plastic Trees"));
-    expect(onTrackSelect).toHaveBeenCalledWith("spotify:track:aaa");
+  it("track row is a link with correct href", async () => {
+    renderPage();
+    await waitFor(() => screen.getByRole("link", { name: /Fake Plastic Trees/ }));
+    const link = screen.getByRole("link", { name: /Fake Plastic Trees/ });
+    expect(link.getAttribute("href")).toBe(`/tracks/${encodeURIComponent("spotify:track:aaa")}`);
   });
 
   it("toggling artist group re-fetches with large page_size", async () => {
@@ -71,7 +77,7 @@ describe("ExplorePage", () => {
     } as any);
     globalThis.fetch = fetchMock;
 
-    render(<ExplorePage onTrackSelect={() => {}} onAlbumSelect={() => {}} onArtistSelect={() => {}} />);
+    renderPage();
     await waitFor(() => screen.getByText("Fake Plastic Trees"));
 
     fireEvent.click(screen.getByRole("button", { name: /artist/i }));
@@ -84,20 +90,18 @@ describe("ExplorePage", () => {
   });
 
   it("shows grouped tree view with artist group header after toggle", async () => {
-    render(<ExplorePage onTrackSelect={() => {}} onAlbumSelect={() => {}} onArtistSelect={() => {}} />);
+    renderPage();
     await waitFor(() => screen.getByText("Fake Plastic Trees"));
 
     fireEvent.click(screen.getByRole("button", { name: /artist/i }));
 
     await waitFor(() => {
-      // Artist group node label should appear
       expect(screen.getByText("Radiohead")).toBeInTheDocument();
     });
   });
 
-  it("calls onArtistSelect when artist group label is clicked in grouped view", async () => {
-    const onArtistSelect = vi.fn();
-    render(<ExplorePage onTrackSelect={() => {}} onAlbumSelect={() => {}} onArtistSelect={onArtistSelect} />);
+  it("artist group label is a link with correct href in grouped view", async () => {
+    renderPage();
     await waitFor(() => screen.getByText("Fake Plastic Trees"));
 
     fireEvent.click(screen.getByRole("button", { name: /artist/i }));
@@ -108,14 +112,13 @@ describe("ExplorePage", () => {
     const artistRow = screen.getByText("Radiohead").closest("div")!;
     fireEvent.click(artistRow);
 
-    // Now click the Radiohead button (artist label link)
-    const artistBtn = screen.getAllByRole("button", { name: "Radiohead" })[0];
-    fireEvent.click(artistBtn);
-    expect(onArtistSelect).toHaveBeenCalledWith("radiohead");
+    // Artist label should now be a link
+    const artistLink = screen.getByRole("link", { name: "Radiohead" });
+    expect(artistLink.getAttribute("href")).toBe(`/artists/${encodeURIComponent("radiohead")}`);
   });
 
   it("shows search clear button when search is active", async () => {
-    render(<ExplorePage onTrackSelect={() => {}} onAlbumSelect={() => {}} onArtistSelect={() => {}} />);
+    renderPage();
     await waitFor(() => screen.getByText("Fake Plastic Trees"));
 
     fireEvent.change(screen.getByPlaceholderText("Track, artist, or album…"), { target: { value: "test" } });

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useParams, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { LinkButton, NavLabel } from "@/components/ui/link-button";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,14 +41,9 @@ function StarPicker({ value, onChange }: StarPickerProps) {
   );
 }
 
-interface AlbumDetailProps {
-  albumKey: string;
-  onClose: () => void;
-  onArtistSelect?: (key: string) => void;
-  onTrackSelect?: (key: string) => void;
-}
-
-export function AlbumDetail({ albumKey, onClose, onArtistSelect, onTrackSelect }: AlbumDetailProps) {
+export function AlbumDetail() {
+  const { key } = useParams<{ key: string }>();
+  const albumKey = decodeURIComponent(key);
   const [album, setAlbum] = useState<Album | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -114,7 +110,7 @@ export function AlbumDetail({ albumKey, onClose, onArtistSelect, onTrackSelect }
   if (loading) {
     return (
       <div>
-        <Button variant="ghost" size="sm" onClick={onClose}>← Explore</Button>
+        <Button variant="ghost" size="sm" onClick={() => window.history.back()}>← Back</Button>
         <p className="mt-6 text-muted-foreground">Loading…</p>
       </div>
     );
@@ -123,7 +119,7 @@ export function AlbumDetail({ albumKey, onClose, onArtistSelect, onTrackSelect }
   if (!album) {
     return (
       <div>
-        <Button variant="ghost" size="sm" onClick={onClose}>← Explore</Button>
+        <Button variant="ghost" size="sm" onClick={() => window.history.back()}>← Back</Button>
         <p className="mt-6 text-destructive">Album not found.</p>
       </div>
     );
@@ -135,8 +131,8 @@ export function AlbumDetail({ albumKey, onClose, onArtistSelect, onTrackSelect }
 
   return (
     <div>
-      <Button variant="ghost" size="sm" onClick={onClose} className="mb-4">
-        ← Explore
+      <Button variant="ghost" size="sm" onClick={() => window.history.back()} className="mb-4">
+        ← Back
       </Button>
 
       {/* Header */}
@@ -146,13 +142,12 @@ export function AlbumDetail({ albumKey, onClose, onArtistSelect, onTrackSelect }
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-2xl font-bold truncate">{album.album_name}</h2>
-          <button
-            type="button"
+          <Link
+            href={`/artists/${encodeURIComponent(album.artist_name.toLowerCase().trim())}`}
             className="text-muted-foreground underline underline-offset-2 text-sm"
-            onClick={() => onArtistSelect?.(album.artist_name.toLowerCase().trim())}
           >
             {album.artist_name}
-          </button>
+          </Link>
           <div className="flex gap-6 mt-2 text-sm text-muted-foreground">
             <span>{album.play_count} plays</span>
             <span>{formatDuration(album.total_ms_played)}</span>
@@ -228,8 +223,8 @@ export function AlbumDetail({ albumKey, onClose, onArtistSelect, onTrackSelect }
             {filteredTracks.map((track, i) => (
               <LinkButton
                 key={track.track_key}
+                href={`/tracks/${encodeURIComponent(track.track_key)}`}
                 className={`gap-3 px-4 py-2 hover:bg-muted/50 ${i > 0 ? "border-t" : ""}`}
-                onClick={() => onTrackSelect?.(track.track_key)}
               >
                 <NavLabel className="flex-1 text-sm font-medium truncate min-w-0">{track.track_name}</NavLabel>
                 {track.reviewed && <span className="text-xs text-green-600">✓</span>}

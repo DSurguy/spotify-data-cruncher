@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useParams, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { LinkButton, NavLabel } from "@/components/ui/link-button";
 import { TrackReviewCard } from "@/components/TrackReviewCard";
@@ -15,14 +16,9 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
-interface TrackDetailProps {
-  trackKey: string;
-  onClose: () => void;
-  onAlbumSelect?: (albumKey: string) => void;
-  onArtistSelect?: (artistKey: string) => void;
-}
-
-export function TrackDetail({ trackKey, onClose, onAlbumSelect, onArtistSelect }: TrackDetailProps) {
+export function TrackDetail() {
+  const { key } = useParams<{ key: string }>();
+  const trackKey = decodeURIComponent(key);
   const [data, setData] = useState<GetTrackResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [playsPage, setPlaysPage] = useState(1);
@@ -40,7 +36,7 @@ export function TrackDetail({ trackKey, onClose, onAlbumSelect, onArtistSelect }
   if (loading && !data) {
     return (
       <div>
-        <Button variant="ghost" size="sm" onClick={onClose}>← Explore</Button>
+        <Button variant="ghost" size="sm" onClick={() => window.history.back()}>← Back</Button>
         <p className="mt-6 text-muted-foreground">Loading…</p>
       </div>
     );
@@ -49,7 +45,7 @@ export function TrackDetail({ trackKey, onClose, onAlbumSelect, onArtistSelect }
   if (!data) {
     return (
       <div>
-        <Button variant="ghost" size="sm" onClick={onClose}>← Explore</Button>
+        <Button variant="ghost" size="sm" onClick={() => window.history.back()}>← Back</Button>
         <p className="mt-6 text-destructive">Track not found.</p>
       </div>
     );
@@ -60,24 +56,19 @@ export function TrackDetail({ trackKey, onClose, onAlbumSelect, onArtistSelect }
 
   return (
     <div>
-      <Button variant="ghost" size="sm" onClick={onClose} className="mb-4">← Explore</Button>
+      <Button variant="ghost" size="sm" onClick={() => window.history.back()} className="mb-4">← Back</Button>
 
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-2xl font-bold">{track.track_name}</h2>
         <p className="text-xs text-muted-foreground uppercase tracking-wide mt-1">Artist</p>
-        {onArtistSelect ? (
-          <button
-            type="button"
-            className="group/name flex items-center gap-1 text-muted-foreground"
-            onClick={() => onArtistSelect(track.artist_name.toLowerCase().trim())}
-          >
-            <span className="underline underline-offset-2">{track.artist_name}</span>
-            <span className="opacity-0 group-hover/name:opacity-100 text-xs transition-opacity" aria-hidden="true">→</span>
-          </button>
-        ) : (
-          <p className="text-muted-foreground">{track.artist_name}</p>
-        )}
+        <Link
+          href={`/artists/${encodeURIComponent(track.artist_name.toLowerCase().trim())}`}
+          className="group/name flex items-center gap-1 text-muted-foreground"
+        >
+          <span className="underline underline-offset-2">{track.artist_name}</span>
+          <span className="opacity-0 group-hover/name:opacity-100 text-xs transition-opacity" aria-hidden="true">→</span>
+        </Link>
         <div className="flex flex-wrap gap-6 mt-2 text-sm text-muted-foreground">
           <span>{track.play_count} plays</span>
           <span>{formatDuration(track.total_ms_played)}</span>
@@ -104,8 +95,8 @@ export function TrackDetail({ trackKey, onClose, onAlbumSelect, onArtistSelect }
             {albums.map(album => (
               <LinkButton
                 key={album.album_key}
+                href={`/albums/${encodeURIComponent(album.album_key)}`}
                 className="gap-2 px-3 py-2 rounded border text-sm hover:bg-muted/50 transition-colors"
-                onClick={() => onAlbumSelect?.(album.album_key)}
               >
                 <NavLabel className="font-medium flex-1">{album.album_name || "Unknown Album"}</NavLabel>
                 <span className="text-muted-foreground text-sm shrink-0">{album.play_count} plays</span>

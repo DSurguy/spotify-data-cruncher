@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { Link } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LinkButton, NavLabel } from "@/components/ui/link-button";
@@ -117,18 +118,17 @@ function RatingBadge({ value }: { value: Track["rating"] }) {
 
 interface TrackRowProps {
   track: Track;
-  onSelect: () => void;
   hideArtist?: boolean;
   hideAlbum?: boolean;
   indent?: number;
 }
 
-function TrackRow({ track, onSelect, hideArtist, hideAlbum, indent = 0 }: TrackRowProps) {
+function TrackRow({ track, hideArtist, hideAlbum, indent = 0 }: TrackRowProps) {
   return (
     <LinkButton
+      href={`/tracks/${encodeURIComponent(track.track_key)}`}
       className="gap-2 py-1.5 hover:bg-muted/40 rounded-md"
       style={{ paddingLeft: `${indent + 12}px`, paddingRight: "12px" }}
-      onClick={onSelect}
     >
       <NavLabel className="truncate flex-1 text-sm min-w-0 font-medium">{track.track_name}</NavLabel>
       {!hideArtist && (
@@ -151,16 +151,12 @@ interface TreeNodeViewProps {
   hasSearch: boolean;
   userExpanded: Set<string>;
   onToggle: (id: string) => void;
-  onTrackSelect: (key: string) => void;
-  onArtistSelect: (key: string) => void;
-  onAlbumSelect: (key: string) => void;
   sort: TrackSort;
   activeGroupLevels: Array<"genre" | "artist" | "album">;
 }
 
 function TreeNodeView({
-  node, depth, hasSearch, userExpanded, onToggle,
-  onTrackSelect, onArtistSelect, onAlbumSelect, sort, activeGroupLevels,
+  node, depth, hasSearch, userExpanded, onToggle, sort, activeGroupLevels,
 }: TreeNodeViewProps) {
   const isOpen = userExpanded.has(node.id) || hasSearch;
   const indentPx = depth * 16;
@@ -183,17 +179,15 @@ function TreeNodeView({
       >
         <span className="text-muted-foreground text-xs w-3 shrink-0">{isOpen ? "▾" : "▸"}</span>
         {showLabelAsLink ? (
-          <button
-            type="button"
-            className="flex-1 text-left text-sm font-semibold underline underline-offset-2 truncate min-w-0"
-            onClick={e => {
-              e.stopPropagation();
-              if (node.level === "artist" && node.navKey) onArtistSelect(node.navKey);
-              else if (node.level === "album" && node.navKey) onAlbumSelect(node.navKey);
-            }}
+          <Link
+            href={node.level === "artist"
+              ? `/artists/${encodeURIComponent(node.navKey)}`
+              : `/albums/${encodeURIComponent(node.navKey)}`}
+            className="flex-1 text-sm font-semibold underline underline-offset-2 truncate min-w-0"
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
           >
             {node.label}
-          </button>
+          </Link>
         ) : (
           <span className="flex-1 text-sm font-semibold truncate min-w-0">{node.label}</span>
         )}
@@ -212,9 +206,6 @@ function TreeNodeView({
                 hasSearch={hasSearch}
                 userExpanded={userExpanded}
                 onToggle={onToggle}
-                onTrackSelect={onTrackSelect}
-                onArtistSelect={onArtistSelect}
-                onAlbumSelect={onAlbumSelect}
                 sort={sort}
                 activeGroupLevels={levelsAbove}
               />
@@ -222,7 +213,6 @@ function TreeNodeView({
               <TrackRow
                 key={(child as Track).track_key}
                 track={child as Track}
-                onSelect={() => onTrackSelect((child as Track).track_key)}
                 hideArtist={levelsAbove.includes("artist")}
                 hideAlbum={levelsAbove.includes("album")}
                 indent={(depth + 1) * 16}
@@ -235,13 +225,7 @@ function TreeNodeView({
   );
 }
 
-interface ExplorePageProps {
-  onTrackSelect: (key: string) => void;
-  onAlbumSelect: (key: string) => void;
-  onArtistSelect: (key: string) => void;
-}
-
-export function ExplorePage({ onTrackSelect, onAlbumSelect, onArtistSelect }: ExplorePageProps) {
+export function ExplorePage() {
   const [sort, setSort] = useState<TrackSort>("total_ms_desc");
   const [searchDraft, setSearchDraft] = useState("");
   const [search, setSearch] = useState("");
@@ -393,9 +377,6 @@ export function ExplorePage({ onTrackSelect, onAlbumSelect, onArtistSelect }: Ex
                   hasSearch={hasSearch}
                   userExpanded={userExpanded}
                   onToggle={toggleNode}
-                  onTrackSelect={onTrackSelect}
-                  onArtistSelect={onArtistSelect}
-                  onAlbumSelect={onAlbumSelect}
                   sort={sort}
                   activeGroupLevels={[]}
                 />
@@ -414,7 +395,6 @@ export function ExplorePage({ onTrackSelect, onAlbumSelect, onArtistSelect }: Ex
                   <TrackRow
                     key={track.track_key}
                     track={track}
-                    onSelect={() => onTrackSelect(track.track_key)}
                   />
                 ))}
               </div>

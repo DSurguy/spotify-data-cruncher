@@ -32,10 +32,9 @@ interface ReviewPanelProps {
   panel: Panel;
   data: ReviewPanelData;
   onRefresh: () => void;
-  onTrackSelect: (key: string) => void;
 }
 
-function ReviewPanel({ panel, data, onRefresh, onTrackSelect }: ReviewPanelProps) {
+function ReviewPanel({ panel, data, onRefresh }: ReviewPanelProps) {
   return (
     <div className="border rounded-lg overflow-hidden flex flex-col">
       <div className="flex items-center justify-between px-4 py-3 bg-muted/30 border-b">
@@ -54,9 +53,9 @@ function ReviewPanel({ panel, data, onRefresh, onTrackSelect }: ReviewPanelProps
             {data.tracks.map((track, i) => (
               <LinkButton
                 key={track.track_key}
+                href={`/tracks/${encodeURIComponent(track.track_key)}`}
                 className={`px-4 py-3 hover:bg-muted/50 transition-colors gap-2 ${i > 0 ? "border-t" : ""}`}
                 arrowPlacement="top"
-                onClick={() => onTrackSelect(track.track_key)}
               >
                 <div className="min-w-0 flex-1">
                   <NavLabel className="font-medium text-sm truncate block">{track.track_name}</NavLabel>
@@ -75,11 +74,7 @@ function ReviewPanel({ panel, data, onRefresh, onTrackSelect }: ReviewPanelProps
   );
 }
 
-interface ReviewPageProps {
-  onTrackSelect: (key: string) => void;
-}
-
-export function ReviewPage({ onTrackSelect }: ReviewPageProps) {
+export function ReviewPage() {
   const [panelData, setPanelData] = useState<ReviewPanelData[]>(
     PANELS.map(() => ({ tracks: [], loading: true })),
   );
@@ -116,7 +111,6 @@ export function ReviewPage({ onTrackSelect }: ReviewPageProps) {
             panel={panel}
             data={panelData[i]}
             onRefresh={() => loadPanel(i)}
-            onTrackSelect={onTrackSelect}
           />
         ))}
       </div>

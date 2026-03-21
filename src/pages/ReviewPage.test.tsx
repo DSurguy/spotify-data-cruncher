@@ -1,5 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "bun:test";
+import { Router } from "wouter";
+import { memoryLocation } from "wouter/memory-location";
 import { ReviewPage } from "./ReviewPage";
 import type { GetTracksResponse } from "@/types/api";
 
@@ -30,14 +32,19 @@ beforeEach(() => {
   } as any);
 });
 
+function renderPage() {
+  const { hook } = memoryLocation({ path: "/review" });
+  return render(<Router hook={hook}><ReviewPage /></Router>);
+}
+
 describe("ReviewPage", () => {
   it("renders page heading", async () => {
-    render(<ReviewPage onTrackSelect={() => {}} />);
+    renderPage();
     await waitFor(() => screen.getByRole("heading", { name: "Review" }));
   });
 
   it("renders all 5 panel titles", async () => {
-    render(<ReviewPage onTrackSelect={() => {}} />);
+    renderPage();
     await waitFor(() => screen.getAllByText("Fake Plastic Trees"));
     expect(screen.getByText("Oldest unreviewed")).toBeInTheDocument();
     expect(screen.getByText("Newest unreviewed")).toBeInTheDocument();
@@ -53,7 +60,7 @@ describe("ReviewPage", () => {
     } as any);
     globalThis.fetch = fetchMock;
 
-    render(<ReviewPage onTrackSelect={() => {}} />);
+    renderPage();
     await waitFor(() => {
       expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(5);
     });
@@ -73,7 +80,7 @@ describe("ReviewPage", () => {
     } as any);
     globalThis.fetch = fetchMock;
 
-    render(<ReviewPage onTrackSelect={() => {}} />);
+    renderPage();
     await waitFor(() => {
       expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(5);
     });
@@ -86,17 +93,17 @@ describe("ReviewPage", () => {
   });
 
   it("shows track rows after loading", async () => {
-    render(<ReviewPage onTrackSelect={() => {}} />);
+    renderPage();
     await waitFor(() => screen.getAllByText("Fake Plastic Trees"));
     expect(screen.getAllByText("Fake Plastic Trees").length).toBe(5);
   });
 
-  it("calls onTrackSelect when a track is clicked", async () => {
-    const onTrackSelect = vi.fn();
-    render(<ReviewPage onTrackSelect={onTrackSelect} />);
+  it("track rows are rendered as links with correct href", async () => {
+    renderPage();
     await waitFor(() => screen.getAllByText("Fake Plastic Trees"));
-    fireEvent.click(screen.getAllByText("Fake Plastic Trees")[0]);
-    expect(onTrackSelect).toHaveBeenCalledWith("spotify:track:aaa");
+    const links = screen.getAllByRole("link", { name: /Fake Plastic Trees/ });
+    expect(links.length).toBeGreaterThan(0);
+    expect(links[0].getAttribute("href")).toBe(`/tracks/${encodeURIComponent("spotify:track:aaa")}`);
   });
 
   it("shows empty state when no unreviewed tracks", async () => {
@@ -104,7 +111,7 @@ describe("ReviewPage", () => {
       ok: true,
       json: async () => makeResponse({ tracks: [], total: 0 }),
     } as any);
-    render(<ReviewPage onTrackSelect={() => {}} />);
+    renderPage();
     await waitFor(() => screen.getAllByText("No unreviewed tracks."));
     expect(screen.getAllByText("No unreviewed tracks.").length).toBe(5);
   });
@@ -116,7 +123,7 @@ describe("ReviewPage", () => {
     } as any);
     globalThis.fetch = fetchMock;
 
-    render(<ReviewPage onTrackSelect={() => {}} />);
+    renderPage();
     await waitFor(() => screen.getAllByText("Fake Plastic Trees"));
 
     const callsBefore = fetchMock.mock.calls.length;

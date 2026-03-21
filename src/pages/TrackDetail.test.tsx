@@ -1,11 +1,16 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "bun:test";
+import { Router, Route } from "wouter";
+import { memoryLocation } from "wouter/memory-location";
 import { TrackDetail } from "./TrackDetail";
 import type { GetTrackResponse } from "@/types/api";
 
+const TRACK_KEY = "spotify:track:abc";
+const ENCODED_KEY = encodeURIComponent(TRACK_KEY);
+
 const mockTrackResponse: GetTrackResponse = {
   track: {
-    track_key: "spotify:track:abc",
+    track_key: TRACK_KEY,
     track_name: "Paranoid Android",
     artist_name: "Radiohead",
     album_name: "OK Computer",
@@ -33,6 +38,21 @@ const mockTrackResponse: GetTrackResponse = {
   },
 };
 
+function renderDetail(mockOverrides?: Partial<GetTrackResponse>) {
+  if (mockOverrides) {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ...mockTrackResponse, ...mockOverrides }),
+    } as any);
+  }
+  const { hook } = memoryLocation({ path: `/tracks/${ENCODED_KEY}` });
+  return render(
+    <Router hook={hook}>
+      <Route path="/tracks/:key"><TrackDetail /></Route>
+    </Router>
+  );
+}
+
 beforeEach(() => {
   globalThis.fetch = vi.fn().mockResolvedValue({
     ok: true,
@@ -42,84 +62,72 @@ beforeEach(() => {
 
 describe("TrackDetail", () => {
   it("shows track name and artist after loading", async () => {
-    render(<TrackDetail trackKey="spotify:track:abc" onClose={() => {}} />);
+    renderDetail();
     await waitFor(() => screen.getByRole("heading", { name: "Paranoid Android" }));
     expect(screen.getByText("Radiohead")).toBeInTheDocument();
   });
 
-  it("shows '← Explore' breadcrumb", async () => {
-    render(<TrackDetail trackKey="spotify:track:abc" onClose={() => {}} />);
-    await waitFor(() => screen.getByRole("button", { name: "← Explore" }));
-  });
-
-  it("calls onClose when breadcrumb clicked", async () => {
-    const onClose = vi.fn();
-    render(<TrackDetail trackKey="spotify:track:abc" onClose={onClose} />);
-    await waitFor(() => screen.getByRole("button", { name: "← Explore" }));
-    fireEvent.click(screen.getByRole("button", { name: "← Explore" }));
-    expect(onClose).toHaveBeenCalled();
+  it("shows back breadcrumb button", async () => {
+    renderDetail();
+    await waitFor(() => screen.getByRole("button", { name: "← Back" }));
   });
 
   it("shows play stats", async () => {
-    render(<TrackDetail trackKey="spotify:track:abc" onClose={() => {}} />);
+    renderDetail();
     await waitFor(() => screen.getByRole("heading", { name: "Paranoid Android" }));
     expect(screen.getByText("55 plays")).toBeInTheDocument();
     expect(screen.getByText("3.6% skip rate")).toBeInTheDocument();
   });
 
   it("shows '✓ Reviewed' badge when track is reviewed", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        ...mockTrackResponse,
-        track: { ...mockTrackResponse.track, reviewed: true },
-      }),
-    } as any);
-    render(<TrackDetail trackKey="spotify:track:abc" onClose={() => {}} />);
+    renderDetail({ track: { ...mockTrackResponse.track, reviewed: true } });
     await waitFor(() => screen.getByText("✓ Reviewed"));
   });
 
   it("shows the Review card section", async () => {
-    render(<TrackDetail trackKey="spotify:track:abc" onClose={() => {}} />);
+    renderDetail();
     await waitFor(() => screen.getByRole("heading", { name: "Review" }));
     expect(screen.getByRole("button", { name: "Edit Review" })).toBeInTheDocument();
   });
 
-  it("shows album in 'Appears on' section", async () => {
-    render(<TrackDetail trackKey="spotify:track:abc" onClose={() => {}} />);
-    await waitFor(() => screen.getByRole("button", { name: /OK Computer/ }));
+  it("shows album in 'Appears on' section as a link", async () => {
+    renderDetail();
+    await waitFor(() => screen.getByRole("link", { name: /OK Computer/ }));
   });
 
-  it("calls onAlbumSelect when album is clicked", async () => {
-    const onAlbumSelect = vi.fn();
-    render(<TrackDetail trackKey="spotify:track:abc" onClose={() => {}} onAlbumSelect={onAlbumSelect} />);
-    await waitFor(() => screen.getByRole("button", { name: /OK Computer/ }));
-    fireEvent.click(screen.getByRole("button", { name: /OK Computer/ }));
-    expect(onAlbumSelect).toHaveBeenCalledWith("ok computer||radiohead");
+  it("album link has correct href", async () => {
+    renderDetail();
+    await waitFor(() => screen.getByRole("link", { name: /OK Computer/ }));
+    const link = screen.getByRole("link", { name: /OK Computer/ });
+    expect(link.getAttribute("href")).toBe(`/albums/${encodeURIComponent("ok computer||radiohead")}`);
   });
 
-  it("renders artist name as a link when onArtistSelect is provided", async () => {
-    render(<TrackDetail trackKey="spotify:track:abc" onClose={() => {}} onArtistSelect={() => {}} />);
-    await waitFor(() => screen.getByRole("button", { name: "Radiohead" }));
+  it("renders artist name as a link", async () => {
+    renderDetail();
+    await waitFor(() => screen.getByRole("link", { name: /Radiohead/ }));
   });
 
-  it("calls onArtistSelect when artist name is clicked", async () => {
-    const onArtistSelect = vi.fn();
-    render(<TrackDetail trackKey="spotify:track:abc" onClose={() => {}} onArtistSelect={onArtistSelect} />);
-    await waitFor(() => screen.getByRole("button", { name: "Radiohead" }));
-    fireEvent.click(screen.getByRole("button", { name: "Radiohead" }));
-    expect(onArtistSelect).toHaveBeenCalledWith("radiohead");
+  it("artist link has correct href", async () => {
+    renderDetail();
+    await waitFor(() => screen.getByRole("link", { name: /Radiohead/ }));
+    const link = screen.getByRole("link", { name: /Radiohead/ });
+    expect(link.getAttribute("href")).toBe(`/artists/${encodeURIComponent("radiohead")}`);
   });
 
   it("shows play history table", async () => {
-    render(<TrackDetail trackKey="spotify:track:abc" onClose={() => {}} />);
+    renderDetail();
     await waitFor(() => screen.getByText("Play history (1)"));
     expect(screen.getByText("Desktop")).toBeInTheDocument();
   });
 
   it("shows loading state before data arrives", () => {
     globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}));
-    render(<TrackDetail trackKey="spotify:track:abc" onClose={() => {}} />);
+    const { hook } = memoryLocation({ path: `/tracks/${ENCODED_KEY}` });
+    render(
+      <Router hook={hook}>
+        <Route path="/tracks/:key"><TrackDetail /></Route>
+      </Router>
+    );
     expect(screen.getByText("Loading…")).toBeInTheDocument();
   });
 });

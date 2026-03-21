@@ -1,5 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "bun:test";
+import { Router } from "wouter";
+import { memoryLocation } from "wouter/memory-location";
 import { App } from "./App";
 
 // All pages make fetch calls on mount — stub with URL-aware responses
@@ -28,31 +30,35 @@ beforeEach(() => {
 
 describe("App", () => {
   it("renders the sidebar and all nav items", async () => {
-    render(<App />);
+    const { hook } = memoryLocation({ path: "/" });
+    render(<Router hook={hook}><App /></Router>);
     await waitFor(() => expect(screen.getByRole("navigation", { name: "sidebar" })).toBeInTheDocument());
     expect(screen.getByText("Spotify Cruncher")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Dashboard" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Explore" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Review" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Datasets" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Explore" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Review" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Datasets" })).toBeInTheDocument();
   });
 
   it("shows the Dashboard page by default", async () => {
-    render(<App />);
+    const { hook } = memoryLocation({ path: "/" });
+    render(<Router hook={hook}><App /></Router>);
     await waitFor(() => expect(screen.getByRole("heading", { name: "Dashboard" })).toBeInTheDocument());
   });
 
   it("Dashboard nav item is marked active by default", async () => {
-    render(<App />);
-    await waitFor(() => screen.getByRole("button", { name: "Dashboard" }));
-    const btn = screen.getByRole("button", { name: "Dashboard" });
-    expect(btn.className).toContain("bg-accent");
+    const { hook } = memoryLocation({ path: "/" });
+    render(<Router hook={hook}><App /></Router>);
+    await waitFor(() => screen.getByRole("link", { name: "Dashboard" }));
+    const link = screen.getByRole("link", { name: "Dashboard" });
+    expect(link.className).toContain("bg-accent");
   });
 
   it("navigates to Datasets page when Datasets nav is clicked", async () => {
-    render(<App />);
-    await waitFor(() => screen.getByRole("button", { name: "Datasets" }));
-    fireEvent.click(screen.getByRole("button", { name: "Datasets" }));
+    const { hook } = memoryLocation({ path: "/" });
+    render(<Router hook={hook}><App /></Router>);
+    await waitFor(() => screen.getByRole("link", { name: "Datasets" }));
+    fireEvent.click(screen.getByRole("link", { name: "Datasets" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Import Data" })).toBeInTheDocument());
   });
 });

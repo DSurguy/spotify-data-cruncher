@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Route, Switch, Link, useRoute } from "wouter";
 import { DatasetsPage } from "./pages/DatasetsPage";
 import { AlbumDetail } from "./pages/AlbumDetail";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -8,38 +8,7 @@ import { ExplorePage } from "./pages/ExplorePage";
 import { ReviewPage } from "./pages/ReviewPage";
 import "./index.css";
 
-type Page = "dashboard" | "explore" | "review" | "datasets";
-type DetailView =
-  | { type: "track"; key: string }
-  | { type: "album"; key: string }
-  | { type: "artist"; key: string }
-  | null;
-
 export function App() {
-  const [page, setPage] = useState<Page>("dashboard");
-  const [detail, setDetail] = useState<DetailView>(null);
-
-  function navigateTo(p: Page) {
-    setPage(p);
-    setDetail(null);
-  }
-
-  function openTrack(key: string) {
-    setDetail({ type: "track", key });
-  }
-
-  function openAlbum(key: string) {
-    setDetail({ type: "album", key });
-  }
-
-  function openArtist(key: string) {
-    setDetail({ type: "artist", key });
-  }
-
-  function closeDetail() {
-    setDetail(null);
-  }
-
   return (
     <div className="grid h-screen bg-background text-foreground max-w-6xl w-screen" style={{ gridTemplateColumns: "13rem 1fr" }}>
       {/* Sidebar */}
@@ -49,67 +18,41 @@ export function App() {
             Spotify Cruncher
           </h1>
         </div>
-        <NavItem label="Dashboard" active={page === "dashboard" && detail === null} onClick={() => navigateTo("dashboard")} />
-        <NavItem label="Explore"   active={page === "explore"}   onClick={() => navigateTo("explore")} />
-        <NavItem label="Review"    active={page === "review"}    onClick={() => navigateTo("review")} />
-        <NavItem label="Datasets"  active={page === "datasets" && detail === null}  onClick={() => navigateTo("datasets")} />
+        <NavItem label="Dashboard" href="/" />
+        <NavItem label="Explore"   href="/explore" />
+        <NavItem label="Review"    href="/review" />
+        <NavItem label="Datasets"  href="/datasets" />
       </nav>
 
       {/* Main content */}
       <main className="flex-1 overflow-y-scroll p-6">
         <div className="w-full max-w-5xl mx-auto">
-        {detail?.type === "track" && (
-          <TrackDetail
-            trackKey={detail.key}
-            onClose={closeDetail}
-            onAlbumSelect={openAlbum}
-            onArtistSelect={openArtist}
-          />
-        )}
-        {detail?.type === "album" && (
-          <AlbumDetail
-            albumKey={detail.key}
-            onClose={closeDetail}
-            onArtistSelect={openArtist}
-            onTrackSelect={openTrack}
-          />
-        )}
-        {detail?.type === "artist" && (
-          <ArtistDetail
-            artistKey={detail.key}
-            onClose={closeDetail}
-            onAlbumSelect={openAlbum}
-            onTrackSelect={openTrack}
-          />
-        )}
-        {detail === null && page === "dashboard" && <DashboardPage />}
-        {detail === null && page === "explore" && (
-          <ExplorePage
-            onTrackSelect={openTrack}
-            onAlbumSelect={openAlbum}
-            onArtistSelect={openArtist}
-          />
-        )}
-        {detail === null && page === "review" && (
-          <ReviewPage onTrackSelect={openTrack} />
-        )}
-        {detail === null && page === "datasets" && <DatasetsPage />}
+          <Switch>
+            <Route path="/" component={DashboardPage} />
+            <Route path="/explore" component={ExplorePage} />
+            <Route path="/review" component={ReviewPage} />
+            <Route path="/datasets" component={DatasetsPage} />
+            <Route path="/tracks/:key"><TrackDetail /></Route>
+            <Route path="/albums/:key"><AlbumDetail /></Route>
+            <Route path="/artists/:key"><ArtistDetail /></Route>
+          </Switch>
         </div>
       </main>
     </div>
   );
 }
 
-function NavItem({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function NavItem({ label, href }: { label: string; href: string }) {
+  const [active] = useRoute(href);
   return (
-    <button
-      onClick={onClick}
+    <Link
+      href={href}
       className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
         active ? "bg-accent text-accent-foreground font-medium" : "hover:bg-muted text-muted-foreground hover:text-foreground"
       }`}
     >
       {label}
-    </button>
+    </Link>
   );
 }
 

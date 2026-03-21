@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 
 const arrowAlignClass = {
@@ -7,16 +8,20 @@ const arrowAlignClass = {
   bottom: "self-end",
 } as const;
 
-interface LinkButtonProps extends React.ComponentProps<"button"> {
+interface LinkButtonProps {
+  href: string;
+  className?: string;
+  style?: React.CSSProperties;
   arrowPlacement?: keyof typeof arrowAlignClass;
+  children: React.ReactNode;
 }
 
-function LinkButton({ className, children, arrowPlacement = "center", ...props }: LinkButtonProps) {
+function LinkButton({ href, className, style, children, arrowPlacement = "center" }: LinkButtonProps) {
   return (
-    <button
-      type="button"
+    <Link
+      href={href}
       className={cn("group flex items-center w-full text-left", className)}
-      {...props}
+      style={style}
     >
       {children}
       <span
@@ -28,7 +33,7 @@ function LinkButton({ className, children, arrowPlacement = "center", ...props }
       >
         →
       </span>
-    </button>
+    </Link>
   );
 }
 
