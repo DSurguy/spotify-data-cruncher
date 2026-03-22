@@ -5,13 +5,13 @@ import { memoryLocation } from "wouter/memory-location";
 import { AlbumDetail } from "./AlbumDetail";
 import type { Album } from "@/types/api";
 
-const ALBUM_KEY = "you won't like this||wolfs";
-const ENCODED_KEY = encodeURIComponent(ALBUM_KEY);
+const ALBUM_SLUG = "you-won-t-like-this";
 
 const mockAlbum: Album = {
-  album_key: ALBUM_KEY,
+  album_slug: ALBUM_SLUG,
   album_name: "You Won't Like This",
   artist_name: "Wolfs",
+  artist_slug: "wolfs",
   play_count: 42,
   total_ms_played: 5_000_000,
   track_count: 10,
@@ -24,7 +24,7 @@ const mockAlbum: Album = {
 };
 
 function renderDetail() {
-  const { hook } = memoryLocation({ path: `/albums/${ENCODED_KEY}` });
+  const { hook } = memoryLocation({ path: `/albums/${ALBUM_SLUG}` });
   return render(
     <Router hook={hook}>
       <Route path="/albums/:key"><AlbumDetail /></Route>
@@ -80,15 +80,17 @@ describe("AlbumDetail", () => {
     renderDetail();
     await waitFor(() => screen.getByText("You Won't Like This"));
     const link = screen.getByRole("link", { name: "Wolfs" });
-    expect(link.getAttribute("href")).toBe(`/artists/${encodeURIComponent("wolfs")}`);
+    expect(link.getAttribute("href")).toBe(`/artists/wolfs`);
   });
 
   it("shows tracks section with track list", async () => {
     const mockTrack = {
-      track_key: "spotify:track:aaa",
+      track_slug: "aaa",
       track_name: "Song One",
       artist_name: "Wolfs",
+      artist_slug: "wolfs",
       album_name: "You Won't Like This",
+      album_slug: ALBUM_SLUG,
       play_count: 5,
       total_ms_played: 300_000,
       first_played: "2022-01-01T00:00:00Z",
@@ -109,10 +111,12 @@ describe("AlbumDetail", () => {
 
   it("track link has correct href", async () => {
     const mockTrack = {
-      track_key: "spotify:track:aaa",
+      track_slug: "aaa",
       track_name: "Song One",
       artist_name: "Wolfs",
+      artist_slug: "wolfs",
       album_name: "You Won't Like This",
+      album_slug: ALBUM_SLUG,
       play_count: 5,
       total_ms_played: 300_000,
       first_played: "2022-01-01T00:00:00Z",
@@ -130,6 +134,6 @@ describe("AlbumDetail", () => {
     renderDetail();
     await waitFor(() => screen.getByRole("link", { name: /Song One/ }));
     const link = screen.getByRole("link", { name: /Song One/ });
-    expect(link.getAttribute("href")).toBe(`/tracks/${encodeURIComponent("spotify:track:aaa")}`);
+    expect(link.getAttribute("href")).toBe(`/tracks/aaa`);
   });
 });

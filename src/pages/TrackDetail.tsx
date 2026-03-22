@@ -18,20 +18,20 @@ function formatDate(iso: string): string {
 
 export function TrackDetail() {
   const { key } = useParams<{ key: string }>();
-  const trackKey = decodeURIComponent(key);
+  const trackSlug = key;
   const [data, setData] = useState<GetTrackResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [playsPage, setPlaysPage] = useState(1);
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/tracks/${encodeURIComponent(trackKey)}?page=${playsPage}`)
+    fetch(`/api/tracks/${trackSlug}?page=${playsPage}`)
       .then(r => r.json())
       .then((body: GetTrackResponse) => {
         setData(body);
         setLoading(false);
       });
-  }, [trackKey, playsPage]);
+  }, [trackSlug, playsPage]);
 
   if (loading && !data) {
     return (
@@ -63,7 +63,7 @@ export function TrackDetail() {
         <h2 className="text-2xl font-bold">{track.track_name}</h2>
         <p className="text-xs text-muted-foreground uppercase tracking-wide mt-1">Artist</p>
         <Link
-          href={`/artists/${encodeURIComponent(track.artist_name.toLowerCase().trim())}`}
+          href={`/artists/${track.artist_slug}`}
           className="group/name flex items-center gap-1 text-muted-foreground"
         >
           <span className="underline underline-offset-2">{track.artist_name}</span>
@@ -81,7 +81,7 @@ export function TrackDetail() {
       </div>
 
       <TrackReviewCard
-        trackKey={trackKey}
+        trackKey={trackSlug}
         rating={track.rating as "like" | "dislike" | "none" | null}
         genre={track.genre}
         notes={track.notes}
@@ -94,8 +94,8 @@ export function TrackDetail() {
           <div className="flex flex-col gap-1">
             {albums.map(album => (
               <LinkButton
-                key={album.album_key}
-                href={`/albums/${encodeURIComponent(album.album_key)}`}
+                key={album.album_slug}
+                href={`/albums/${album.album_slug}`}
                 className="gap-2 px-3 py-2 rounded border text-sm hover:bg-muted/50 transition-colors"
               >
                 <NavLabel className="font-medium flex-1">{album.album_name || "Unknown Album"}</NavLabel>

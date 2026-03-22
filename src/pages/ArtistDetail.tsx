@@ -22,7 +22,7 @@ type TrackSort = "total_ms_desc" | "play_count_desc" | "name_asc" | "last_played
 
 export function ArtistDetail() {
   const { key } = useParams<{ key: string }>();
-  const artistKey = decodeURIComponent(key);
+  const artistSlug = key;
   const [artist, setArtist] = useState<Artist | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"albums" | "tracks">("albums");
@@ -49,13 +49,13 @@ export function ArtistDetail() {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/artists/${encodeURIComponent(artistKey)}`)
+    fetch(`/api/artists/${artistSlug}`)
       .then(r => r.json())
       .then((body: Artist) => {
         setArtist(body);
         setLoading(false);
       });
-  }, [artistKey]);
+  }, [artistSlug]);
 
   const loadAlbums = useCallback(async (artistName: string) => {
     setAlbumLoading(true);
@@ -200,8 +200,8 @@ export function ArtistDetail() {
             <div className="border rounded-lg overflow-hidden mb-3">
               {albums.map((album, i) => (
                 <LinkButton
-                  key={album.album_key}
-                  href={`/albums/${encodeURIComponent(album.album_key)}`}
+                  key={album.album_slug}
+                  href={`/albums/${album.album_slug}`}
                   className={`gap-3 px-4 py-2 hover:bg-muted/50 ${i > 0 ? "border-t" : ""}`}
                 >
                   <NavLabel className="flex-1 text-sm font-medium truncate min-w-0">{album.album_name}</NavLabel>
@@ -273,8 +273,8 @@ export function ArtistDetail() {
             <div className="border rounded-lg overflow-hidden mb-3">
               {tracks.map((track, i) => (
                 <LinkButton
-                  key={track.track_key}
-                  href={`/tracks/${encodeURIComponent(track.track_key)}`}
+                  key={track.track_slug}
+                  href={`/tracks/${track.track_slug}`}
                   className={`gap-3 px-4 py-2 hover:bg-muted/50 ${i > 0 ? "border-t" : ""}`}
                 >
                   <NavLabel className="flex-1 text-sm font-medium truncate min-w-0">{track.track_name}</NavLabel>

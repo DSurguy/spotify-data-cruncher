@@ -6,10 +6,12 @@ import { ExplorePage } from "./ExplorePage";
 import type { GetTracksResponse } from "@/types/api";
 
 const sampleTrack = {
-  track_key: "spotify:track:aaa",
+  track_slug: "aaa",
   track_name: "Fake Plastic Trees",
   artist_name: "Radiohead",
+  artist_slug: "radiohead",
   album_name: "The Bends",
+  album_slug: "the-bends",
   play_count: 47,
   total_ms_played: 14_100_000,
   first_played: "2020-01-01T00:00:00Z",
@@ -67,7 +69,7 @@ describe("ExplorePage", () => {
     renderPage();
     await waitFor(() => screen.getByRole("link", { name: /Fake Plastic Trees/ }));
     const link = screen.getByRole("link", { name: /Fake Plastic Trees/ });
-    expect(link.getAttribute("href")).toBe(`/tracks/${encodeURIComponent("spotify:track:aaa")}`);
+    expect(link.getAttribute("href")).toBe(`/tracks/aaa`);
   });
 
   it("toggling artist group re-fetches with large page_size", async () => {
@@ -114,7 +116,7 @@ describe("ExplorePage", () => {
 
     // Artist label should now be a link
     const artistLink = screen.getByRole("link", { name: "Radiohead" });
-    expect(artistLink.getAttribute("href")).toBe(`/artists/${encodeURIComponent("radiohead")}`);
+    expect(artistLink.getAttribute("href")).toBe(`/artists/radiohead`);
   });
 
   it("shows search clear button when search is active", async () => {

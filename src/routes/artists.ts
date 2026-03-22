@@ -19,7 +19,7 @@ const SORT_CLAUSES: Record<ArtistSort, string> = {
 };
 
 interface ArtistRow {
-  artist_key: string;
+  artist_slug: string;
   artist_name: string;
   play_count: number;
   total_ms_played: number;
@@ -36,8 +36,6 @@ function parseOverrideValue(raw: string | null): string | number | null {
   if (raw === null) return null;
   try { return JSON.parse(raw); } catch { return null; }
 }
-
-const artistKeySql = `lower(trim(COALESCE(p.artist_name,'')))`;
 
 export function handleGetArtists(db: Database, req: Request): Response {
   const url = new URL(req.url);
@@ -69,32 +67,32 @@ export function handleGetArtists(db: Database, req: Request): Response {
 
   const baseQuery = `
     SELECT
-      ${artistKeySql} AS artist_key,
+      p.artist_slug,
       p.artist_name,
       COUNT(*) AS play_count,
       SUM(p.ms_played) AS total_ms_played,
-      COUNT(DISTINCT lower(trim(COALESCE(p.album_name,'')))) AS album_count,
+      COUNT(DISTINCT p.album_slug) AS album_count,
       MIN(p.ts) AS first_played,
       MAX(p.ts) AS last_played,
       (SELECT o.value FROM metadata_overrides o
         WHERE o.entity_type = 'artist'
-          AND o.entity_key = ${artistKeySql}
+          AND o.entity_key = p.artist_slug
           AND o.field = 'rating' LIMIT 1) AS rating,
       (SELECT o.value FROM metadata_overrides o
         WHERE o.entity_type = 'artist'
-          AND o.entity_key = ${artistKeySql}
+          AND o.entity_key = p.artist_slug
           AND o.field = 'genre' LIMIT 1) AS genre,
       (SELECT o.value FROM metadata_overrides o
         WHERE o.entity_type = 'artist'
-          AND o.entity_key = ${artistKeySql}
+          AND o.entity_key = p.artist_slug
           AND o.field = 'notes' LIMIT 1) AS notes,
       (SELECT o.value FROM metadata_overrides o
         WHERE o.entity_type = 'artist'
-          AND o.entity_key = ${artistKeySql}
+          AND o.entity_key = p.artist_slug
           AND o.field = 'reviewed' LIMIT 1) AS reviewed_raw
     FROM plays p
-    WHERE ${where}
-    GROUP BY artist_key
+    WHERE ${where} AND p.artist_slug IS NOT NULL
+    GROUP BY p.artist_slug
   `;
 
   const havingClause = ratedOnly ? "HAVING rating IS NOT NULL" : "";
@@ -116,7 +114,7 @@ export function handleGetArtists(db: Database, req: Request): Response {
   ).all(...params);
 
   const artists: Artist[] = rows.map(r => ({
-    artist_key: r.artist_key,
+    artist_slug: r.artist_slug,
     artist_name: r.artist_name,
     play_count: r.play_count,
     total_ms_played: r.total_ms_played,
@@ -133,12 +131,12 @@ export function handleGetArtists(db: Database, req: Request): Response {
   return Response.json(body);
 }
 
-export function handleGetArtist(db: Database, req: Request, key: string): Response {
+export function handleGetArtist(db: Database, req: Request, slug: string): Response {
   const url = new URL(req.url);
   const datasetId = url.searchParams.get("dataset_id");
 
-  const conditions: string[] = ["p.content_type = 'track'", `lower(trim(COALESCE(p.artist_name,''))) = ?`];
-  const params: (string | number)[] = [key];
+  const conditions: string[] = ["p.content_type = 'track'", "p.artist_slug = ?"];
+  const params: (string | number)[] = [slug];
 
   if (datasetId) { conditions.push("p.dataset_id = ?"); params.push(Number(datasetId)); }
 
@@ -147,7 +145,7 @@ export function handleGetArtist(db: Database, req: Request, key: string): Respon
   const getOverride = (field: string): string | null => {
     const row = db.query<{ value: string | null }, [string, string]>(
       `SELECT value FROM metadata_overrides WHERE entity_type = 'artist' AND entity_key = ? AND field = ?`
-    ).get(key, field);
+    ).get(slug, field);
     return row?.value ?? null;
   };
 
@@ -157,7 +155,7 @@ export function handleGetArtist(db: Database, req: Request, key: string): Respon
   }, typeof params>(
     `SELECT p.artist_name,
       COUNT(*) AS play_count, SUM(p.ms_played) AS total_ms_played,
-      COUNT(DISTINCT lower(trim(COALESCE(p.album_name,'')))) AS album_count,
+      COUNT(DISTINCT p.album_slug) AS album_count,
       MIN(p.ts) AS first_played, MAX(p.ts) AS last_played
     FROM plays p WHERE ${where} GROUP BY 1 LIMIT 1`
   ).get(...params);
@@ -167,7 +165,7 @@ export function handleGetArtist(db: Database, req: Request, key: string): Respon
   }
 
   const artist: Artist = {
-    artist_key: key,
+    artist_slug: slug,
     artist_name: artistRow.artist_name,
     play_count: artistRow.play_count,
     total_ms_played: artistRow.total_ms_played,

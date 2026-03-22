@@ -17,11 +17,11 @@ describe("handleGetArtists", () => {
 
     db.run(`INSERT INTO datasets (name, created_at) VALUES ('Test', '2024-01-01')`);
     db.run(`INSERT INTO plays
-      (dataset_id, ts, ms_played, content_type, track_name, artist_name, album_name, spotify_track_uri)
+      (dataset_id, ts, ms_played, content_type, track_name, artist_name, album_name, spotify_track_uri, album_slug, artist_slug, track_slug)
       VALUES
-      (1, '2024-01-01T10:00:00Z', 200000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa'),
-      (1, '2024-01-02T10:00:00Z', 180000, 'track', 'Track B', 'Artist X', 'Album 2', 'spotify:track:bbb'),
-      (1, '2024-01-03T10:00:00Z', 150000, 'track', 'Track C', 'Artist Y', 'Album 3', 'spotify:track:ccc')`);
+      (1, '2024-01-01T10:00:00Z', 200000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa', 'album-1', 'artist-x', 'aaa'),
+      (1, '2024-01-02T10:00:00Z', 180000, 'track', 'Track B', 'Artist X', 'Album 2', 'spotify:track:bbb', 'album-2', 'artist-x', 'bbb'),
+      (1, '2024-01-03T10:00:00Z', 150000, 'track', 'Track C', 'Artist Y', 'Album 3', 'spotify:track:ccc', 'album-3', 'artist-y', 'ccc')`);
     db.run(`INSERT INTO plays
       (dataset_id, ts, ms_played, content_type, episode_name, episode_show_name, spotify_episode_uri)
       VALUES
@@ -72,8 +72,8 @@ describe("handleGetArtists", () => {
 
   it("filters by dataset_id", async () => {
     db.run(`INSERT INTO datasets (name, created_at) VALUES ('Other', '2024-02-01')`);
-    db.run(`INSERT INTO plays (dataset_id, ts, ms_played, content_type, track_name, artist_name, album_name, spotify_track_uri)
-      VALUES (2, '2024-02-01T10:00:00Z', 100000, 'track', 'X', 'Artist Z', 'Album Z', 'spotify:track:zzz')`);
+    db.run(`INSERT INTO plays (dataset_id, ts, ms_played, content_type, track_name, artist_name, album_name, spotify_track_uri, album_slug, artist_slug, track_slug)
+      VALUES (2, '2024-02-01T10:00:00Z', 100000, 'track', 'X', 'Artist Z', 'Album Z', 'spotify:track:zzz', 'album-z', 'artist-z', 'zzz')`);
     const res = handleGetArtists(db, makeReq("/api/artists?dataset_id=2"));
     const body = await res.json();
     expect(body.artists).toHaveLength(1);
@@ -86,7 +86,7 @@ describe("handleGetArtists", () => {
   });
 
   it("includes override fields (genre, rating, notes)", async () => {
-    const key = "artist x";
+    const key = "artist-x";
     db.run(`INSERT INTO metadata_overrides (entity_type, entity_key, field, value, updated_at)
       VALUES ('artist', '${key}', 'rating', '4', '2024-01-01T00:00:00Z')`);
     const res = handleGetArtists(db, makeReq("/api/artists"));
@@ -105,16 +105,16 @@ describe("handleGetArtist", () => {
     runMigrations(db);
     db.run(`INSERT INTO datasets (name, created_at) VALUES ('Test', '2024-01-01')`);
     db.run(`INSERT INTO plays
-      (dataset_id, ts, ms_played, content_type, track_name, artist_name, album_name, spotify_track_uri)
+      (dataset_id, ts, ms_played, content_type, track_name, artist_name, album_name, spotify_track_uri, album_slug, artist_slug, track_slug)
       VALUES
-      (1, '2024-01-01T10:00:00Z', 200000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa'),
-      (1, '2024-01-02T10:00:00Z', 180000, 'track', 'Track B', 'Artist X', 'Album 2', 'spotify:track:bbb')`);
+      (1, '2024-01-01T10:00:00Z', 200000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa', 'album-1', 'artist-x', 'aaa'),
+      (1, '2024-01-02T10:00:00Z', 180000, 'track', 'Track B', 'Artist X', 'Album 2', 'spotify:track:bbb', 'album-2', 'artist-x', 'bbb')`);
   });
 
   afterEach(() => db.close());
 
   it("returns single artist by key", async () => {
-    const res = handleGetArtist(db, makeReq("/api/artists/artist+x"), "artist x");
+    const res = handleGetArtist(db, makeReq("/api/artists/artist-x"), "artist-x");
     const body = await res.json();
     expect(res.status).toBe(200);
     expect(body.artist_name).toBe("Artist X");
@@ -128,15 +128,15 @@ describe("handleGetArtist", () => {
   });
 
   it("reviewed defaults to false when no override", async () => {
-    const res = handleGetArtist(db, makeReq("/api/artists/artist+x"), "artist x");
+    const res = handleGetArtist(db, makeReq("/api/artists/artist-x"), "artist-x");
     const body = await res.json();
     expect(body.reviewed).toBe(false);
   });
 
   it("reviewed is true when override set", async () => {
     db.run(`INSERT INTO metadata_overrides (entity_type, entity_key, field, value, updated_at)
-      VALUES ('artist', 'artist x', 'reviewed', 'true', '2024-01-01T00:00:00Z')`);
-    const res = handleGetArtist(db, makeReq("/api/artists/artist+x"), "artist x");
+      VALUES ('artist', 'artist-x', 'reviewed', 'true', '2024-01-01T00:00:00Z')`);
+    const res = handleGetArtist(db, makeReq("/api/artists/artist-x"), "artist-x");
     const body = await res.json();
     expect(body.reviewed).toBe(true);
   });
@@ -151,10 +151,10 @@ describe("handleGetArtists reviewed filter", () => {
     runMigrations(db);
     db.run(`INSERT INTO datasets (name, created_at) VALUES ('Test', '2024-01-01')`);
     db.run(`INSERT INTO plays
-      (dataset_id, ts, ms_played, content_type, track_name, artist_name, album_name, spotify_track_uri)
+      (dataset_id, ts, ms_played, content_type, track_name, artist_name, album_name, spotify_track_uri, album_slug, artist_slug, track_slug)
       VALUES
-      (1, '2024-01-01T10:00:00Z', 200000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa'),
-      (1, '2024-01-02T10:00:00Z', 180000, 'track', 'Track B', 'Artist Y', 'Album 2', 'spotify:track:bbb')`);
+      (1, '2024-01-01T10:00:00Z', 200000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa', 'album-1', 'artist-x', 'aaa'),
+      (1, '2024-01-02T10:00:00Z', 180000, 'track', 'Track B', 'Artist Y', 'Album 2', 'spotify:track:bbb', 'album-2', 'artist-y', 'bbb')`);
   });
 
   afterEach(() => db.close());
@@ -167,7 +167,7 @@ describe("handleGetArtists reviewed filter", () => {
 
   it("filters reviewed=true returns only reviewed artists", async () => {
     db.run(`INSERT INTO metadata_overrides (entity_type, entity_key, field, value, updated_at)
-      VALUES ('artist', 'artist x', 'reviewed', 'true', '2024-01-01T00:00:00Z')`);
+      VALUES ('artist', 'artist-x', 'reviewed', 'true', '2024-01-01T00:00:00Z')`);
     const res = handleGetArtists(db, makeReq("/api/artists?reviewed=true"));
     const body = await res.json();
     expect(body.total).toBe(1);
@@ -176,7 +176,7 @@ describe("handleGetArtists reviewed filter", () => {
 
   it("filters reviewed=false returns only unreviewed artists", async () => {
     db.run(`INSERT INTO metadata_overrides (entity_type, entity_key, field, value, updated_at)
-      VALUES ('artist', 'artist x', 'reviewed', 'true', '2024-01-01T00:00:00Z')`);
+      VALUES ('artist', 'artist-x', 'reviewed', 'true', '2024-01-01T00:00:00Z')`);
     const res = handleGetArtists(db, makeReq("/api/artists?reviewed=false"));
     const body = await res.json();
     expect(body.total).toBe(1);

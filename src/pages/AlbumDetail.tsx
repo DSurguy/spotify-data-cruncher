@@ -43,7 +43,7 @@ function StarPicker({ value, onChange }: StarPickerProps) {
 
 export function AlbumDetail() {
   const { key } = useParams<{ key: string }>();
-  const albumKey = decodeURIComponent(key);
+  const albumSlug = key;
   const [album, setAlbum] = useState<Album | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -62,7 +62,7 @@ export function AlbumDetail() {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/albums/${encodeURIComponent(albumKey)}`)
+    fetch(`/api/albums/${albumSlug}`)
       .then(r => r.json())
       .then(body => {
         setAlbum(body.album);
@@ -71,7 +71,7 @@ export function AlbumDetail() {
         setNotes(body.album.notes ?? "");
         setLoading(false);
       });
-  }, [albumKey]);
+  }, [albumSlug]);
 
   const loadTracks = useCallback(async (albumName: string, artistName: string) => {
     setTracksLoading(true);
@@ -94,7 +94,7 @@ export function AlbumDetail() {
   async function saveOverrides() {
     setSaving(true);
     setSaved(false);
-    await fetch(`/api/overrides/album/${encodeURIComponent(albumKey)}`, {
+    await fetch(`/api/overrides/album/${albumSlug}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify([
@@ -143,7 +143,7 @@ export function AlbumDetail() {
         <div className="flex-1 min-w-0">
           <h2 className="text-2xl font-bold truncate">{album.album_name}</h2>
           <Link
-            href={`/artists/${encodeURIComponent(album.artist_name.toLowerCase().trim())}`}
+            href={`/artists/${album.artist_slug}`}
             className="text-muted-foreground underline underline-offset-2 text-sm"
           >
             {album.artist_name}
@@ -222,8 +222,8 @@ export function AlbumDetail() {
           <div className="border rounded-lg overflow-hidden">
             {filteredTracks.map((track, i) => (
               <LinkButton
-                key={track.track_key}
-                href={`/tracks/${encodeURIComponent(track.track_key)}`}
+                key={track.track_slug}
+                href={`/tracks/${track.track_slug}`}
                 className={`gap-3 px-4 py-2 hover:bg-muted/50 ${i > 0 ? "border-t" : ""}`}
               >
                 <NavLabel className="flex-1 text-sm font-medium truncate min-w-0">{track.track_name}</NavLabel>

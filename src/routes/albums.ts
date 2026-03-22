@@ -21,9 +21,10 @@ const SORT_CLAUSES: Record<AlbumSort, string> = {
 };
 
 interface AlbumRow {
-  album_key: string;
+  album_slug: string;
   album_name: string;
   artist_name: string;
+  artist_slug: string;
   play_count: number;
   total_ms_played: number;
   track_count: number;
@@ -68,20 +69,12 @@ export function handleGetAlbums(db: Database, req: Request): Response {
 
   const where = conditions.map(c => `(${c})`).join(" AND ");
 
-  // album_key: URI preferred for tracks with URIs, otherwise normalized name+artist
-  const albumKeySql = `
-    CASE
-      WHEN p.spotify_track_uri IS NOT NULL
-        THEN lower(trim(COALESCE(p.album_name,''))) || '||' || lower(trim(COALESCE(p.artist_name,'')))
-      ELSE lower(trim(COALESCE(p.album_name,''))) || '||' || lower(trim(COALESCE(p.artist_name,'')))
-    END
-  `;
-
   const baseQuery = `
     SELECT
-      ${albumKeySql} AS album_key,
+      p.album_slug,
       p.album_name,
       p.artist_name,
+      MIN(p.artist_slug) AS artist_slug,
       COUNT(*) AS play_count,
       SUM(p.ms_played) AS total_ms_played,
       COUNT(DISTINCT p.spotify_track_uri) AS track_count,
@@ -89,19 +82,19 @@ export function handleGetAlbums(db: Database, req: Request): Response {
       MAX(p.ts) AS last_played,
       (SELECT o.value FROM metadata_overrides o
         WHERE o.entity_type = 'album'
-          AND o.entity_key = ${albumKeySql}
+          AND o.entity_key = p.album_slug
           AND o.field = 'rating' LIMIT 1) AS rating,
       (SELECT o.value FROM metadata_overrides o
         WHERE o.entity_type = 'album'
-          AND o.entity_key = ${albumKeySql}
+          AND o.entity_key = p.album_slug
           AND o.field = 'genre' LIMIT 1) AS genre,
       (SELECT o.value FROM metadata_overrides o
         WHERE o.entity_type = 'album'
-          AND o.entity_key = ${albumKeySql}
+          AND o.entity_key = p.album_slug
           AND o.field = 'notes' LIMIT 1) AS notes
     FROM plays p
-    WHERE ${where}
-    GROUP BY album_key
+    WHERE ${where} AND p.album_slug IS NOT NULL
+    GROUP BY p.album_slug
   `;
 
   const havingClause = ratedOnly ? "HAVING rating IS NOT NULL" : "";
@@ -118,9 +111,10 @@ export function handleGetAlbums(db: Database, req: Request): Response {
   ).all(...params);
 
   const albums: Album[] = rows.map(r => ({
-    album_key: r.album_key,
+    album_slug: r.album_slug,
     album_name: r.album_name,
     artist_name: r.artist_name,
+    artist_slug: r.artist_slug,
     play_count: r.play_count,
     total_ms_played: r.total_ms_played,
     track_count: r.track_count,
@@ -129,40 +123,36 @@ export function handleGetAlbums(db: Database, req: Request): Response {
     genre: parseOverrideValue(r.genre) as string | null,
     rating: parseOverrideValue(r.rating) as number | null,
     notes: parseOverrideValue(r.notes) as string | null,
-    art_url: null, // album art served separately via /api/art
+    art_url: null,
   }));
 
   const body: GetAlbumsResponse = { albums, total, page, page_size: pageSize };
   return Response.json(body);
 }
 
-export function handleGetAlbum(db: Database, req: Request, key: string): Response {
+export function handleGetAlbum(db: Database, req: Request, slug: string): Response {
   const url = new URL(req.url);
   const datasetId = url.searchParams.get("dataset_id");
 
-  const conditions: string[] = ["p.content_type = 'track'", `(lower(trim(COALESCE(p.album_name,''))) || '||' || lower(trim(COALESCE(p.artist_name,'')))) = ?`];
-  const params: (string | number)[] = [key];
+  const conditions: string[] = ["p.content_type = 'track'", "p.album_slug = ?"];
+  const params: (string | number)[] = [slug];
 
   if (datasetId) { conditions.push("p.dataset_id = ?"); params.push(Number(datasetId)); }
 
   const where = conditions.map(c => `(${c})`).join(" AND ");
 
-  const overrideRow = (field: string) => db.query<{ value: string | null }, [string, string, string]>(
-    `SELECT value FROM metadata_overrides WHERE entity_type = 'album' AND entity_key = ? AND field = ? LIMIT 1`
-  ).get(key, field, field);  // intentional: third param unused, bun needs exact arity
-
   const getOverride = (field: string): string | null => {
     const row = db.query<{ value: string | null }, [string, string]>(
       `SELECT value FROM metadata_overrides WHERE entity_type = 'album' AND entity_key = ? AND field = ?`
-    ).get(key, field);
+    ).get(slug, field);
     return row?.value ?? null;
   };
 
   const albumRow = db.query<{
-    album_name: string; artist_name: string; play_count: number;
+    album_name: string; artist_name: string; artist_slug: string; play_count: number;
     total_ms_played: number; track_count: number; first_played: string; last_played: string;
   }, typeof params>(
-    `SELECT p.album_name, p.artist_name,
+    `SELECT p.album_name, p.artist_name, MIN(p.artist_slug) AS artist_slug,
       COUNT(*) AS play_count, SUM(p.ms_played) AS total_ms_played,
       COUNT(DISTINCT p.spotify_track_uri) AS track_count,
       MIN(p.ts) AS first_played, MAX(p.ts) AS last_played
@@ -172,9 +162,10 @@ export function handleGetAlbum(db: Database, req: Request, key: string): Respons
   if (!albumRow) return new Response("album not found", { status: 404 });
 
   const album: Album = {
-    album_key: key,
+    album_slug: slug,
     album_name: albumRow.album_name,
     artist_name: albumRow.artist_name,
+    artist_slug: albumRow.artist_slug,
     play_count: albumRow.play_count,
     total_ms_played: albumRow.total_ms_played,
     track_count: albumRow.track_count,

@@ -52,8 +52,8 @@ function ReviewPanel({ panel, data, onRefresh }: ReviewPanelProps) {
           <div>
             {data.tracks.map((track, i) => (
               <LinkButton
-                key={track.track_key}
-                href={`/tracks/${encodeURIComponent(track.track_key)}`}
+                key={track.track_slug}
+                href={`/tracks/${track.track_slug}`}
                 className={`px-4 py-3 hover:bg-muted/50 transition-colors gap-2 ${i > 0 ? "border-t" : ""}`}
                 arrowPlacement="top"
               >

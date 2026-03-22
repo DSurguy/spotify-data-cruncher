@@ -3,10 +3,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { Router, Route } from "wouter";import { memoryLocation } from "wouter/memory-location";import { ArtistDetail } from "./ArtistDetail";
 import type { Artist, GetAlbumsResponse, GetTracksResponse } from "@/types/api";
 
-const ARTIST_KEY = "radiohead";
+const ARTIST_SLUG = "radiohead";
 
 const mockArtist: Artist = {
-  artist_key: ARTIST_KEY,
+  artist_slug: ARTIST_SLUG,
   artist_name: "Radiohead",
   play_count: 200,
   total_ms_played: 60_000_000,
@@ -22,9 +22,10 @@ const mockArtist: Artist = {
 const mockAlbumsResponse: GetAlbumsResponse = {
   albums: [
     {
-      album_key: "ok computer||radiohead",
+      album_slug: "ok-computer",
       album_name: "OK Computer",
       artist_name: "Radiohead",
+      artist_slug: "radiohead",
       play_count: 80,
       total_ms_played: 25_000_000,
       track_count: 12,
@@ -44,10 +45,12 @@ const mockAlbumsResponse: GetAlbumsResponse = {
 const mockTracksResponse: GetTracksResponse = {
   tracks: [
     {
-      track_key: "spotify:track:paranoid",
+      track_slug: "paranoid",
       track_name: "Paranoid Android",
       artist_name: "Radiohead",
+      artist_slug: "radiohead",
       album_name: "OK Computer",
+      album_slug: "ok-computer",
       play_count: 30,
       total_ms_played: 9_000_000,
       first_played: "2019-01-01T00:00:00Z",
@@ -64,8 +67,8 @@ const mockTracksResponse: GetTracksResponse = {
   page_size: 50,
 };
 
-function renderDetail(artistKey = ARTIST_KEY) {
-  const { hook } = memoryLocation({ path: `/artists/${encodeURIComponent(artistKey)}` });
+function renderDetail(artistSlug = ARTIST_SLUG) {
+  const { hook } = memoryLocation({ path: `/artists/${artistSlug}` });
   return render(
     <Router hook={hook}>
       <Route path="/artists/:key"><ArtistDetail /></Route>
@@ -113,7 +116,7 @@ describe("ArtistDetail", () => {
     renderDetail();
     await waitFor(() => screen.getByRole("link", { name: /OK Computer/ }));
     const link = screen.getByRole("link", { name: /OK Computer/ });
-    expect(link.getAttribute("href")).toBe(`/albums/${encodeURIComponent("ok computer||radiohead")}`);
+    expect(link.getAttribute("href")).toBe(`/albums/ok-computer`);
   });
 
   it("switches to tracks tab and shows tracks", async () => {
@@ -129,7 +132,7 @@ describe("ArtistDetail", () => {
     fireEvent.click(screen.getByRole("button", { name: /Tracks/ }));
     await waitFor(() => screen.getByRole("link", { name: /Paranoid Android/ }));
     const link = screen.getByRole("link", { name: /Paranoid Android/ });
-    expect(link.getAttribute("href")).toBe(`/tracks/${encodeURIComponent("spotify:track:paranoid")}`);
+    expect(link.getAttribute("href")).toBe(`/tracks/paranoid`);
   });
 
   it("shows 404 state for unknown artist", async () => {

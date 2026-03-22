@@ -60,13 +60,11 @@ function buildTreeLevel(
     } else if (level === "artist") {
       key = (track.artist_name ?? "").toLowerCase().trim();
       label = track.artist_name || "Unknown Artist";
-      navKey = key;
+      navKey = track.artist_slug ?? key;
     } else {
-      const aKey = (track.album_name ?? "").toLowerCase().trim();
-      const rKey = (track.artist_name ?? "").toLowerCase().trim();
-      key = `${aKey}||${rKey}`;
+      key = (track.album_name ?? "").toLowerCase().trim() + "||" + (track.artist_name ?? "").toLowerCase().trim();
       label = track.album_name || "Unknown Album";
-      navKey = key;
+      navKey = track.album_slug ?? key;
     }
     if (!groupMap.has(key)) groupMap.set(key, { label, tracks: [], navKey });
     groupMap.get(key)!.tracks.push(track);
@@ -126,7 +124,7 @@ interface TrackRowProps {
 function TrackRow({ track, hideArtist, hideAlbum, indent = 0 }: TrackRowProps) {
   return (
     <LinkButton
-      href={`/tracks/${encodeURIComponent(track.track_key)}`}
+      href={`/tracks/${track.track_slug}`}
       className="gap-2 py-1.5 hover:bg-muted/40 rounded-md"
       style={{ paddingLeft: `${indent + 12}px`, paddingRight: "12px" }}
     >
@@ -181,8 +179,8 @@ function TreeNodeView({
         {showLabelAsLink ? (
           <Link
             href={node.level === "artist"
-              ? `/artists/${encodeURIComponent(node.navKey)}`
-              : `/albums/${encodeURIComponent(node.navKey)}`}
+              ? `/artists/${node.navKey}`
+              : `/albums/${node.navKey}`}
             className="flex-1 text-sm font-semibold underline underline-offset-2 truncate min-w-0"
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
           >
@@ -211,7 +209,7 @@ function TreeNodeView({
               />
             ) : (
               <TrackRow
-                key={(child as Track).track_key}
+                key={(child as Track).track_slug}
                 track={child as Track}
                 hideArtist={levelsAbove.includes("artist")}
                 hideAlbum={levelsAbove.includes("album")}

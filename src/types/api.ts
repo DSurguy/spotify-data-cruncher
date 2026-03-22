@@ -77,9 +77,10 @@ export interface GetPlaysResponse {
 // --- Albums ---
 
 export interface Album {
-  album_key: string;
+  album_slug: string;
   album_name: string;
   artist_name: string;
+  artist_slug: string;
   play_count: number;
   total_ms_played: number;
   track_count: number;
@@ -101,10 +102,12 @@ export interface GetAlbumsResponse {
 // --- Tracks ---
 
 export interface Track {
-  track_key: string;           // spotify_track_uri, or fallback normalized key
+  track_slug: string;
   track_name: string;
   artist_name: string;
+  artist_slug: string;
   album_name: string | null;
+  album_slug: string | null;
   play_count: number;
   total_ms_played: number;
   first_played: string;
@@ -124,9 +127,10 @@ export interface GetTracksResponse {
 }
 
 export interface TrackDetail {
-  track_key: string;
+  track_slug: string;
   track_name: string;
   artist_name: string;
+  artist_slug: string;
   album_name: string | null;
   play_count: number;
   total_ms_played: number;
@@ -141,7 +145,7 @@ export interface TrackDetail {
 }
 
 export interface TrackAlbumEntry {
-  album_key: string;
+  album_slug: string;
   album_name: string;
   artist_name: string;
   play_count: number;
@@ -171,7 +175,7 @@ export interface GetTrackResponse {
 // --- Artists ---
 
 export interface Artist {
-  artist_key: string;
+  artist_slug: string;
   artist_name: string;
   play_count: number;
   total_ms_played: number;

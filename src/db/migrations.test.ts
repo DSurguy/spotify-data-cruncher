@@ -30,7 +30,7 @@ describe("runMigrations", () => {
   it("records the applied migration version", () => {
     runMigrations(db);
     const row = db.query<{ version: number }, []>(`SELECT MAX(version) as version FROM schema_version`).get();
-    expect(row?.version).toBe(1);
+    expect(row?.version).toBe(2);
   });
 
   it("is idempotent — running twice does not error or duplicate", () => {
@@ -38,7 +38,7 @@ describe("runMigrations", () => {
     runMigrations(db);
 
     const count = db.query<{ c: number }, []>(`SELECT COUNT(*) as c FROM schema_version`).get();
-    expect(count?.c).toBe(1);
+    expect(count?.c).toBe(2);
   });
 
   it("enables foreign key enforcement", () => {

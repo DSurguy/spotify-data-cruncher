@@ -27,7 +27,9 @@ const SORT_CLAUSES: Record<TrackSort, string> = {
 };
 
 interface TrackRow {
-  track_key: string;
+  track_slug: string;
+  artist_slug: string;
+  album_slug: string | null;
   track_name: string;
   artist_name: string;
   album_name: string | null;
@@ -46,14 +48,6 @@ function parseOverrideValue(raw: string | null): string | number | null {
   if (raw === null) return null;
   try { return JSON.parse(raw); } catch { return null; }
 }
-
-// Track key: URI when available, else normalized name||artist||album
-const trackKeySql = `
-  CASE
-    WHEN p.spotify_track_uri IS NOT NULL THEN p.spotify_track_uri
-    ELSE lower(trim(COALESCE(p.track_name,''))) || '||' || lower(trim(COALESCE(p.artist_name,''))) || '||' || lower(trim(COALESCE(p.album_name,'')))
-  END
-`;
 
 export function handleGetTracks(db: Database, req: Request): Response {
   const url = new URL(req.url);
@@ -88,7 +82,9 @@ export function handleGetTracks(db: Database, req: Request): Response {
 
   const baseQuery = `
     SELECT
-      (${trackKeySql}) AS track_key,
+      p.track_slug,
+      MIN(p.artist_slug) AS artist_slug,
+      MIN(p.album_slug) AS album_slug,
       p.track_name,
       p.artist_name,
       p.album_name,
@@ -99,23 +95,23 @@ export function handleGetTracks(db: Database, req: Request): Response {
       SUM(CASE WHEN p.skipped = 1 THEN 1 ELSE 0 END) AS skipped_count,
       (SELECT o.value FROM metadata_overrides o
         WHERE o.entity_type = 'track'
-          AND o.entity_key = (${trackKeySql})
+          AND o.entity_key = p.track_slug
           AND o.field = 'genre' LIMIT 1) AS genre,
       (SELECT o.value FROM metadata_overrides o
         WHERE o.entity_type = 'track'
-          AND o.entity_key = (${trackKeySql})
+          AND o.entity_key = p.track_slug
           AND o.field = 'rating' LIMIT 1) AS rating,
       (SELECT o.value FROM metadata_overrides o
         WHERE o.entity_type = 'track'
-          AND o.entity_key = (${trackKeySql})
+          AND o.entity_key = p.track_slug
           AND o.field = 'notes' LIMIT 1) AS notes,
       (SELECT o.value FROM metadata_overrides o
         WHERE o.entity_type = 'track'
-          AND o.entity_key = (${trackKeySql})
+          AND o.entity_key = p.track_slug
           AND o.field = 'reviewed' LIMIT 1) AS reviewed_raw
     FROM plays p
-    WHERE ${where}
-    GROUP BY track_key
+    WHERE ${where} AND p.track_slug IS NOT NULL
+    GROUP BY p.track_slug
   `;
 
   // skip_rate computed after grouping
@@ -143,10 +139,12 @@ export function handleGetTracks(db: Database, req: Request): Response {
   ).all(...params);
 
   const tracks: Track[] = rows.map(r => ({
-    track_key: r.track_key,
+    track_slug: r.track_slug,
     track_name: r.track_name,
     artist_name: r.artist_name,
+    artist_slug: r.artist_slug,
     album_name: r.album_name,
+    album_slug: r.album_slug,
     play_count: r.play_count,
     total_ms_played: r.total_ms_played,
     first_played: r.first_played,
@@ -162,16 +160,17 @@ export function handleGetTracks(db: Database, req: Request): Response {
   return Response.json(body);
 }
 
-export function handleGetTrack(db: Database, _req: Request, key: string): Response {
+export function handleGetTrack(db: Database, _req: Request, slug: string): Response {
   const url = new URL(_req.url);
   const p = url.searchParams;
   const page = Math.max(1, parseInt(p.get("page") ?? "1", 10));
   const pageSize = Math.min(200, Math.max(1, parseInt(p.get("page_size") ?? "50", 10)));
 
-  const keyFilter = `(${trackKeySql}) = ?`;
+  const slugFilter = `p.track_slug = ?`;
 
   interface TrackDetailRow {
-    track_key: string;
+    track_slug: string;
+    artist_slug: string;
     track_name: string;
     artist_name: string;
     album_name: string | null;
@@ -189,7 +188,8 @@ export function handleGetTrack(db: Database, _req: Request, key: string): Respon
 
   const trackRow = db.query<TrackDetailRow, [string]>(`
     SELECT
-      (${trackKeySql}) AS track_key,
+      p.track_slug,
+      MIN(p.artist_slug) AS artist_slug,
       p.track_name,
       p.artist_name,
       p.album_name,
@@ -201,30 +201,29 @@ export function handleGetTrack(db: Database, _req: Request, key: string): Respon
       CAST(SUM(CASE WHEN p.skipped = 1 THEN 1 ELSE 0 END) AS REAL) / COUNT(*) * 100 AS skip_rate,
       (SELECT o.value FROM metadata_overrides o
         WHERE o.entity_type = 'track'
-          AND o.entity_key = (${trackKeySql})
+          AND o.entity_key = p.track_slug
           AND o.field = 'genre' LIMIT 1) AS genre,
       (SELECT o.value FROM metadata_overrides o
         WHERE o.entity_type = 'track'
-          AND o.entity_key = (${trackKeySql})
+          AND o.entity_key = p.track_slug
           AND o.field = 'rating' LIMIT 1) AS rating,
       (SELECT o.value FROM metadata_overrides o
         WHERE o.entity_type = 'track'
-          AND o.entity_key = (${trackKeySql})
+          AND o.entity_key = p.track_slug
           AND o.field = 'notes' LIMIT 1) AS notes,
       (SELECT o.value FROM metadata_overrides o
         WHERE o.entity_type = 'track'
-          AND o.entity_key = (${trackKeySql})
+          AND o.entity_key = p.track_slug
           AND o.field = 'reviewed' LIMIT 1) AS reviewed_raw
     FROM plays p
-    WHERE p.content_type = 'track'
-      AND ${keyFilter}
-    GROUP BY track_key
-  `).get(key);
+    WHERE p.content_type = 'track' AND ${slugFilter}
+    GROUP BY p.track_slug
+  `).get(slug);
 
   if (!trackRow) return new Response("not found", { status: 404 });
 
   interface AlbumRow {
-    album_key: string;
+    album_slug: string;
     album_name: string | null;
     artist_name: string | null;
     play_count: number;
@@ -232,16 +231,15 @@ export function handleGetTrack(db: Database, _req: Request, key: string): Respon
 
   const albumRows = db.query<AlbumRow, [string]>(`
     SELECT
-      lower(trim(COALESCE(p.album_name,''))) || '||' || lower(trim(COALESCE(p.artist_name,''))) AS album_key,
+      MIN(p.album_slug) AS album_slug,
       p.album_name,
       p.artist_name,
       COUNT(*) AS play_count
     FROM plays p
-    WHERE p.content_type = 'track'
-      AND ${keyFilter}
-    GROUP BY lower(trim(COALESCE(p.album_name,''))), lower(trim(COALESCE(p.artist_name,'')))
+    WHERE p.content_type = 'track' AND ${slugFilter}
+    GROUP BY p.album_slug
     ORDER BY play_count DESC
-  `).all(key);
+  `).all(slug);
 
   interface PlayHistoryRow {
     ts: string;
@@ -254,8 +252,8 @@ export function handleGetTrack(db: Database, _req: Request, key: string): Respon
   }
 
   const totalPlaysRow = db.query<{ n: number }, [string]>(
-    `SELECT COUNT(*) AS n FROM plays p WHERE p.content_type = 'track' AND ${keyFilter}`
-  ).get(key);
+    `SELECT COUNT(*) AS n FROM plays p WHERE p.content_type = 'track' AND ${slugFilter}`
+  ).get(slug);
   const totalPlays = totalPlaysRow?.n ?? 0;
 
   const offset = (page - 1) * pageSize;
@@ -263,15 +261,16 @@ export function handleGetTrack(db: Database, _req: Request, key: string): Respon
     SELECT ts, ms_played, skipped, platform, reason_start, reason_end, shuffle
     FROM plays p
     WHERE p.content_type = 'track'
-      AND ${keyFilter}
+      AND ${slugFilter}
     ORDER BY ts DESC
     LIMIT ${pageSize} OFFSET ${offset}
-  `).all(key);
+  `).all(slug);
 
   const track: TrackDetail = {
-    track_key: trackRow.track_key,
+    track_slug: trackRow.track_slug,
     track_name: trackRow.track_name,
     artist_name: trackRow.artist_name,
+    artist_slug: trackRow.artist_slug,
     album_name: trackRow.album_name,
     play_count: trackRow.play_count,
     total_ms_played: trackRow.total_ms_played,
@@ -288,7 +287,7 @@ export function handleGetTrack(db: Database, _req: Request, key: string): Respon
   const body: GetTrackResponse = {
     track,
     albums: albumRows.map(r => ({
-      album_key: r.album_key,
+      album_slug: r.album_slug,
       album_name: r.album_name ?? "",
       artist_name: r.artist_name ?? "",
       play_count: r.play_count,

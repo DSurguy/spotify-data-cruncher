@@ -5,14 +5,14 @@ import { memoryLocation } from "wouter/memory-location";
 import { TrackDetail } from "./TrackDetail";
 import type { GetTrackResponse } from "@/types/api";
 
-const TRACK_KEY = "spotify:track:abc";
-const ENCODED_KEY = encodeURIComponent(TRACK_KEY);
+const TRACK_SLUG = "abc";
 
 const mockTrackResponse: GetTrackResponse = {
   track: {
-    track_key: TRACK_KEY,
+    track_slug: TRACK_SLUG,
     track_name: "Paranoid Android",
     artist_name: "Radiohead",
+    artist_slug: "radiohead",
     album_name: "OK Computer",
     play_count: 55,
     total_ms_played: 16_500_000,
@@ -26,7 +26,7 @@ const mockTrackResponse: GetTrackResponse = {
     reviewed: false,
   },
   albums: [
-    { album_key: "ok computer||radiohead", album_name: "OK Computer", artist_name: "Radiohead", play_count: 80 },
+    { album_slug: "ok-computer", album_name: "OK Computer", artist_name: "Radiohead", play_count: 80 },
   ],
   plays: {
     items: [
@@ -45,7 +45,7 @@ function renderDetail(mockOverrides?: Partial<GetTrackResponse>) {
       json: async () => ({ ...mockTrackResponse, ...mockOverrides }),
     } as any);
   }
-  const { hook } = memoryLocation({ path: `/tracks/${ENCODED_KEY}` });
+  const { hook } = memoryLocation({ path: `/tracks/${TRACK_SLUG}` });
   return render(
     <Router hook={hook}>
       <Route path="/tracks/:key"><TrackDetail /></Route>
@@ -99,7 +99,7 @@ describe("TrackDetail", () => {
     renderDetail();
     await waitFor(() => screen.getByRole("link", { name: /OK Computer/ }));
     const link = screen.getByRole("link", { name: /OK Computer/ });
-    expect(link.getAttribute("href")).toBe(`/albums/${encodeURIComponent("ok computer||radiohead")}`);
+    expect(link.getAttribute("href")).toBe(`/albums/ok-computer`);
   });
 
   it("renders artist name as a link", async () => {
@@ -111,7 +111,7 @@ describe("TrackDetail", () => {
     renderDetail();
     await waitFor(() => screen.getByRole("link", { name: /Radiohead/ }));
     const link = screen.getByRole("link", { name: /Radiohead/ });
-    expect(link.getAttribute("href")).toBe(`/artists/${encodeURIComponent("radiohead")}`);
+    expect(link.getAttribute("href")).toBe(`/artists/radiohead`);
   });
 
   it("shows play history table", async () => {
@@ -122,7 +122,7 @@ describe("TrackDetail", () => {
 
   it("shows loading state before data arrives", () => {
     globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}));
-    const { hook } = memoryLocation({ path: `/tracks/${ENCODED_KEY}` });
+    const { hook } = memoryLocation({ path: `/tracks/${TRACK_SLUG}` });
     render(
       <Router hook={hook}>
         <Route path="/tracks/:key"><TrackDetail /></Route>
