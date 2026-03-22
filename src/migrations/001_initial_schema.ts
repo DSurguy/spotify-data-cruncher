@@ -79,7 +79,7 @@ export function up(db: Database): void {
     )
   `);
 
-  db.run(`CREATE INDEX overrides_lookup ON metadata_overrides(entity_type, entity_key)`);
+  db.run(`CREATE INDEX overrides_lookup ON metadata_overrides(entity_type, entity_key, field)`);
 
   db.run(`
     CREATE TABLE album_art (

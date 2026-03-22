@@ -190,6 +190,14 @@ describe("handleGetTracks", () => {
     expect(body.total).toBe(2); // Track B and Track C
     expect(body.tracks.every((t: any) => t.track_name !== "Track A")).toBe(true);
   });
+
+  it("count=false skips count query and returns null total", async () => {
+    const res = handleGetTracks(db, makeReq("/api/tracks?count=false"));
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.total).toBeNull();
+    expect(body.tracks).toHaveLength(3);
+  });
 });
 
 describe("handleGetTrack", () => {

@@ -77,7 +77,7 @@ export function TracksPage({ onTrackSelect }: { onTrackSelect?: (key: string) =>
     const res = await fetch(`/api/tracks?${params}`);
     const body: GetTracksResponse = await res.json();
     setTracks(body.tracks);
-    setTotal(body.total);
+    setTotal(body.total ?? 0);
     setLoading(false);
   }, []);
 

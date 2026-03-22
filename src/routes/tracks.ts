@@ -60,6 +60,7 @@ export function handleGetTracks(db: Database, req: Request): Response {
   const from = p.get("from");
   const to = p.get("to");
   const reviewedParam = p.get("reviewed"); // "true" | "false" | null
+  const skipCount = p.get("count") === "false";
   const sort: TrackSort = (p.get("sort") as TrackSort) || "play_count_desc";
   const page = Math.max(1, parseInt(p.get("page") ?? "1", 10));
   const pageSize = Math.min(2000, Math.max(1, parseInt(p.get("page_size") ?? "50", 10)));
@@ -93,23 +94,21 @@ export function handleGetTracks(db: Database, req: Request): Response {
       MIN(p.ts) AS first_played,
       MAX(p.ts) AS last_played,
       SUM(CASE WHEN p.skipped = 1 THEN 1 ELSE 0 END) AS skipped_count,
-      (SELECT o.value FROM metadata_overrides o
-        WHERE o.entity_type = 'track'
-          AND o.entity_key = p.track_slug
-          AND o.field = 'genre' LIMIT 1) AS genre,
-      (SELECT o.value FROM metadata_overrides o
-        WHERE o.entity_type = 'track'
-          AND o.entity_key = p.track_slug
-          AND o.field = 'rating' LIMIT 1) AS rating,
-      (SELECT o.value FROM metadata_overrides o
-        WHERE o.entity_type = 'track'
-          AND o.entity_key = p.track_slug
-          AND o.field = 'notes' LIMIT 1) AS notes,
-      (SELECT o.value FROM metadata_overrides o
-        WHERE o.entity_type = 'track'
-          AND o.entity_key = p.track_slug
-          AND o.field = 'reviewed' LIMIT 1) AS reviewed_raw
+      o.genre,
+      o.rating,
+      o.notes,
+      o.reviewed_raw
     FROM plays p
+    LEFT JOIN (
+      SELECT entity_key,
+        MAX(CASE WHEN field = 'genre'    THEN value END) AS genre,
+        MAX(CASE WHEN field = 'rating'   THEN value END) AS rating,
+        MAX(CASE WHEN field = 'notes'    THEN value END) AS notes,
+        MAX(CASE WHEN field = 'reviewed' THEN value END) AS reviewed_raw
+      FROM metadata_overrides
+      WHERE entity_type = 'track'
+      GROUP BY entity_key
+    ) o ON o.entity_key = p.track_slug
     WHERE ${where} AND p.track_slug IS NOT NULL
     GROUP BY p.track_slug
   `;
@@ -129,10 +128,11 @@ export function handleGetTracks(db: Database, req: Request): Response {
   const sortClause = SORT_CLAUSES[sort];
   const offset = (page - 1) * pageSize;
 
-  const countRow = db.query<{ n: number }, typeof params>(
-    `SELECT COUNT(*) AS n FROM (${filteredQuery}) sub`
-  ).get(...params);
-  const total = countRow?.n ?? 0;
+  const total = skipCount ? null : (
+    db.query<{ n: number }, typeof params>(
+      `SELECT COUNT(*) AS n FROM (${filteredQuery}) sub`
+    ).get(...params)?.n ?? 0
+  );
 
   const rows = db.query<TrackRow & { skip_rate: number }, typeof params>(
     `${filteredQuery} ORDER BY ${sortClause} LIMIT ${pageSize} OFFSET ${offset}`

@@ -121,7 +121,7 @@ export interface Track {
 
 export interface GetTracksResponse {
   tracks: Track[];
-  total: number;
+  total: number | null;
   page: number;
   page_size: number;
 }

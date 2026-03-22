@@ -85,6 +85,7 @@ export function ReviewPage() {
       reviewed: "false",
       sort: PANELS[index].sort,
       page_size: "5",
+      count: "false",
     });
     const res = await fetch(`/api/tracks?${params}`);
     const body: GetTracksResponse = await res.json();
