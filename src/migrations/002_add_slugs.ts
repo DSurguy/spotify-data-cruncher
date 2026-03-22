@@ -75,14 +75,37 @@ export function up(db: Database): void {
   })();
 
   // ---- Track slugs ----
-  // URI tracks: slug = lowercased Spotify track ID (strip "spotify:track:" prefix)
-  db.run(`
-    UPDATE plays
-    SET track_slug = lower(replace(spotify_track_uri, 'spotify:track:', ''))
-    WHERE spotify_track_uri IS NOT NULL AND spotify_track_uri LIKE 'spotify:track:%'
-  `);
+  // All tracks use name-based slugs; URI tracks use the URI as dedup registry key
+  const trackRegistry = new SlugRegistry();
+  const trackKeyToSlug = new Map<string, string>();
 
-  // Non-URI tracks: name-based slugs (deduplicated separately from URI tracks)
+  // Step 1: URI tracks — grouped by URI, slug based on track name
+  interface UriTrackRecord {
+    uri: string;
+    track_raw: string;
+  }
+  const uriTrackRows = db.query<UriTrackRecord, []>(`
+    SELECT
+      spotify_track_uri AS uri,
+      MIN(track_name) AS track_raw
+    FROM plays
+    WHERE spotify_track_uri IS NOT NULL
+      AND content_type = 'track'
+      AND track_name IS NOT NULL AND track_name != ''
+    GROUP BY spotify_track_uri
+    ORDER BY MIN(id)
+  `).all();
+
+  const uriUpdate = db.prepare(`UPDATE plays SET track_slug = ? WHERE spotify_track_uri = ?`);
+  db.transaction(() => {
+    for (const row of uriTrackRows) {
+      const slug = trackRegistry.getOrAssign(row.uri, toSlug(row.track_raw));
+      trackKeyToSlug.set(row.uri, slug);
+      uriUpdate.run(slug, row.uri);
+    }
+  })();
+
+  // Step 2: Non-URI tracks — grouped by name+artist+album
   interface NonUriRecord {
     track_norm: string;
     artist_norm: string;
@@ -103,8 +126,6 @@ export function up(db: Database): void {
     ORDER BY MIN(id)
   `).all();
 
-  const trackRegistry = new SlugRegistry();
-  const trackKeyToSlug = new Map<string, string>();
   const trackUpdate = db.prepare(
     `UPDATE plays SET track_slug = ?
      WHERE spotify_track_uri IS NULL
@@ -136,12 +157,6 @@ export function up(db: Database): void {
         [newSlug, oldKey],
       );
     }
-    // URI track overrides: strip "spotify:track:" prefix and lowercase
-    db.run(`
-      UPDATE metadata_overrides
-      SET entity_key = lower(replace(entity_key, 'spotify:track:', ''))
-      WHERE entity_type = 'track' AND entity_key LIKE 'spotify:track:%'
-    `);
     for (const [oldKey, newSlug] of trackKeyToSlug) {
       db.run(
         `UPDATE metadata_overrides SET entity_key = ? WHERE entity_type = 'track' AND entity_key = ?`,

@@ -45,7 +45,7 @@ const mockAlbumsResponse: GetAlbumsResponse = {
 const mockTracksResponse: GetTracksResponse = {
   tracks: [
     {
-      track_slug: "paranoid",
+      track_slug: "paranoid-android",
       track_name: "Paranoid Android",
       artist_name: "Radiohead",
       artist_slug: "radiohead",
@@ -132,7 +132,7 @@ describe("ArtistDetail", () => {
     fireEvent.click(screen.getByRole("button", { name: /Tracks/ }));
     await waitFor(() => screen.getByRole("link", { name: /Paranoid Android/ }));
     const link = screen.getByRole("link", { name: /Paranoid Android/ });
-    expect(link.getAttribute("href")).toBe(`/tracks/paranoid`);
+    expect(link.getAttribute("href")).toBe(`/tracks/paranoid-android`);
   });
 
   it("shows 404 state for unknown artist", async () => {

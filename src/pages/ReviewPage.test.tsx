@@ -6,7 +6,7 @@ import { ReviewPage } from "./ReviewPage";
 import type { GetTracksResponse } from "@/types/api";
 
 const sampleTrack = {
-  track_slug: "aaa",
+  track_slug: "fake-plastic-trees",
   track_name: "Fake Plastic Trees",
   artist_name: "Radiohead",
   artist_slug: "radiohead",
@@ -105,7 +105,7 @@ describe("ReviewPage", () => {
     await waitFor(() => screen.getAllByText("Fake Plastic Trees"));
     const links = screen.getAllByRole("link", { name: /Fake Plastic Trees/ });
     expect(links.length).toBeGreaterThan(0);
-    expect(links[0].getAttribute("href")).toBe(`/tracks/aaa`);
+    expect(links[0].getAttribute("href")).toBe(`/tracks/fake-plastic-trees`);
   });
 
   it("shows empty state when no unreviewed tracks", async () => {

@@ -19,10 +19,10 @@ describe("handleGetTracks", () => {
     db.run(`INSERT INTO plays
       (dataset_id, ts, ms_played, content_type, track_name, artist_name, album_name, spotify_track_uri, skipped, album_slug, artist_slug, track_slug)
       VALUES
-      (1, '2024-01-01T10:00:00Z', 200000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa', 0, 'album-1', 'artist-x', 'aaa'),
-      (1, '2024-01-02T10:00:00Z', 200000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa', 1, 'album-1', 'artist-x', 'aaa'),
-      (1, '2024-01-03T10:00:00Z', 180000, 'track', 'Track B', 'Artist X', 'Album 1', 'spotify:track:bbb', 0, 'album-1', 'artist-x', 'bbb'),
-      (1, '2024-01-04T10:00:00Z', 150000, 'track', 'Track C', 'Artist Y', 'Album 2', 'spotify:track:ccc', 0, 'album-2', 'artist-y', 'ccc')`);
+      (1, '2024-01-01T10:00:00Z', 200000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa', 0, 'album-1', 'artist-x', 'track-a'),
+      (1, '2024-01-02T10:00:00Z', 200000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa', 1, 'album-1', 'artist-x', 'track-a'),
+      (1, '2024-01-03T10:00:00Z', 180000, 'track', 'Track B', 'Artist X', 'Album 1', 'spotify:track:bbb', 0, 'album-1', 'artist-x', 'track-b'),
+      (1, '2024-01-04T10:00:00Z', 150000, 'track', 'Track C', 'Artist Y', 'Album 2', 'spotify:track:ccc', 0, 'album-2', 'artist-y', 'track-c')`);
     db.run(`INSERT INTO plays
       (dataset_id, ts, ms_played, content_type, episode_name, episode_show_name, spotify_episode_uri)
       VALUES
@@ -53,7 +53,7 @@ describe("handleGetTracks", () => {
     expect(a.play_count).toBe(2);
     expect(a.total_ms_played).toBe(400000);
     expect(a.last_played).toBe("2024-01-02T10:00:00Z");
-    expect(a.track_slug).toBe("aaa");
+    expect(a.track_slug).toBe("track-a");
   });
 
   it("calculates skip_rate correctly", async () => {
@@ -99,7 +99,7 @@ describe("handleGetTracks", () => {
   it("filters by dataset_id", async () => {
     db.run(`INSERT INTO datasets (name, created_at) VALUES ('Other', '2024-02-01')`);
     db.run(`INSERT INTO plays (dataset_id, ts, ms_played, content_type, track_name, artist_name, album_name, spotify_track_uri, album_slug, artist_slug, track_slug)
-      VALUES (2, '2024-02-01T10:00:00Z', 100000, 'track', 'Track Z', 'Artist Z', 'Album Z', 'spotify:track:zzz', 'album-z', 'artist-z', 'zzz')`);
+      VALUES (2, '2024-02-01T10:00:00Z', 100000, 'track', 'Track Z', 'Artist Z', 'Album Z', 'spotify:track:zzz', 'album-z', 'artist-z', 'track-z')`);
     const res = handleGetTracks(db, makeReq("/api/tracks?dataset_id=2"));
     const body = await res.json();
     expect(body.total).toBe(1);
@@ -113,7 +113,7 @@ describe("handleGetTracks", () => {
 
   it("includes override fields (rating, notes)", async () => {
     db.run(`INSERT INTO metadata_overrides (entity_type, entity_key, field, value, updated_at)
-      VALUES ('track', 'aaa', 'rating', '"like"', '2024-01-01T00:00:00Z')`);
+      VALUES ('track', 'track-a', 'rating', '"like"', '2024-01-01T00:00:00Z')`);
     const res = handleGetTracks(db, makeReq("/api/tracks"));
     const body = await res.json();
     const a = body.tracks.find((t: any) => t.track_name === "Track A");
@@ -122,7 +122,7 @@ describe("handleGetTracks", () => {
 
   it("includes genre override field", async () => {
     db.run(`INSERT INTO metadata_overrides (entity_type, entity_key, field, value, updated_at)
-      VALUES ('track', 'aaa', 'genre', '"Indie Rock"', '2024-01-01T00:00:00Z')`);
+      VALUES ('track', 'track-a', 'genre', '"Indie Rock"', '2024-01-01T00:00:00Z')`);
     const res = handleGetTracks(db, makeReq("/api/tracks"));
     const body = await res.json();
     const a = body.tracks.find((t: any) => t.track_name === "Track A");
@@ -164,7 +164,7 @@ describe("handleGetTracks", () => {
 
   it("reviewed is true when override set to 'true'", async () => {
     db.run(`INSERT INTO metadata_overrides (entity_type, entity_key, field, value, updated_at)
-      VALUES ('track', 'aaa', 'reviewed', 'true', '2024-01-01T00:00:00Z')`);
+      VALUES ('track', 'track-a', 'reviewed', 'true', '2024-01-01T00:00:00Z')`);
     const res = handleGetTracks(db, makeReq("/api/tracks"));
     const body = await res.json();
     const a = body.tracks.find((t: any) => t.track_name === "Track A");
@@ -175,7 +175,7 @@ describe("handleGetTracks", () => {
 
   it("filters reviewed=true returns only reviewed tracks", async () => {
     db.run(`INSERT INTO metadata_overrides (entity_type, entity_key, field, value, updated_at)
-      VALUES ('track', 'aaa', 'reviewed', 'true', '2024-01-01T00:00:00Z')`);
+      VALUES ('track', 'track-a', 'reviewed', 'true', '2024-01-01T00:00:00Z')`);
     const res = handleGetTracks(db, makeReq("/api/tracks?reviewed=true"));
     const body = await res.json();
     expect(body.total).toBe(1);
@@ -184,7 +184,7 @@ describe("handleGetTracks", () => {
 
   it("filters reviewed=false returns only unreviewed tracks", async () => {
     db.run(`INSERT INTO metadata_overrides (entity_type, entity_key, field, value, updated_at)
-      VALUES ('track', 'aaa', 'reviewed', 'true', '2024-01-01T00:00:00Z')`);
+      VALUES ('track', 'track-a', 'reviewed', 'true', '2024-01-01T00:00:00Z')`);
     const res = handleGetTracks(db, makeReq("/api/tracks?reviewed=false"));
     const body = await res.json();
     expect(body.total).toBe(2); // Track B and Track C
@@ -203,15 +203,15 @@ describe("handleGetTrack", () => {
     db.run(`INSERT INTO plays
       (dataset_id, ts, ms_played, content_type, track_name, artist_name, album_name, spotify_track_uri, skipped, album_slug, artist_slug, track_slug)
       VALUES
-      (1, '2024-01-01T10:00:00Z', 200000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa', 0, 'album-1', 'artist-x', 'aaa'),
-      (1, '2024-01-02T10:00:00Z', 180000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa', 1, 'album-1', 'artist-x', 'aaa'),
-      (1, '2024-01-03T10:00:00Z', 150000, 'track', 'Track B', 'Artist X', 'Album 2', 'spotify:track:bbb', null, 'album-2', 'artist-x', 'bbb')`);
+      (1, '2024-01-01T10:00:00Z', 200000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa', 0, 'album-1', 'artist-x', 'track-a'),
+      (1, '2024-01-02T10:00:00Z', 180000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa', 1, 'album-1', 'artist-x', 'track-a'),
+      (1, '2024-01-03T10:00:00Z', 150000, 'track', 'Track B', 'Artist X', 'Album 2', 'spotify:track:bbb', null, 'album-2', 'artist-x', 'track-b')`);
   });
 
   afterEach(() => db.close());
 
   it("returns track metadata for valid key", async () => {
-    const res = handleGetTrack(db, makeReq("/api/tracks/aaa"), "aaa");
+    const res = handleGetTrack(db, makeReq("/api/tracks/track-a"), "track-a");
     const body = await res.json();
     expect(res.status).toBe(200);
     expect(body.track.track_name).toBe("Track A");
@@ -225,7 +225,7 @@ describe("handleGetTrack", () => {
   });
 
   it("returns albums containing track", async () => {
-    const res = handleGetTrack(db, makeReq("/api/tracks/aaa"), "aaa");
+    const res = handleGetTrack(db, makeReq("/api/tracks/track-a"), "track-a");
     const body = await res.json();
     expect(body.albums.length).toBe(1);
     expect(body.albums[0].album_name).toBe("Album 1");
@@ -233,7 +233,7 @@ describe("handleGetTrack", () => {
   });
 
   it("returns paginated play history in desc order", async () => {
-    const res = handleGetTrack(db, makeReq("/api/tracks/aaa"), "aaa");
+    const res = handleGetTrack(db, makeReq("/api/tracks/track-a"), "track-a");
     const body = await res.json();
     expect(body.plays.total).toBe(2);
     expect(body.plays.items.length).toBe(2);
@@ -242,16 +242,16 @@ describe("handleGetTrack", () => {
 
   it("includes override fields", async () => {
     db.run(`INSERT INTO metadata_overrides (entity_type, entity_key, field, value, updated_at)
-      VALUES ('track', 'aaa', 'rating', '"like"', '2024-01-01T00:00:00Z'),
-             ('track', 'aaa', 'genre', '"Indie"', '2024-01-01T00:00:00Z')`);
-    const res = handleGetTrack(db, makeReq("/api/tracks/aaa"), "aaa");
+      VALUES ('track', 'track-a', 'rating', '"like"', '2024-01-01T00:00:00Z'),
+             ('track', 'track-a', 'genre', '"Indie"', '2024-01-01T00:00:00Z')`);
+    const res = handleGetTrack(db, makeReq("/api/tracks/track-a"), "track-a");
     const body = await res.json();
     expect(body.track.rating).toBe("like");
     expect(body.track.genre).toBe("Indie");
   });
 
   it("includes first_played field", async () => {
-    const res = handleGetTrack(db, makeReq("/api/tracks/aaa"), "aaa");
+    const res = handleGetTrack(db, makeReq("/api/tracks/track-a"), "track-a");
     const body = await res.json();
     expect(body.track.first_played).toBe("2024-01-01T10:00:00Z");
   });

@@ -86,16 +86,15 @@ export function importRecords(db: Database, datasetId: number, records: SpotifyR
     const uri = record.spotify_track_uri;
     const name = record.master_metadata_track_name;
     if (!uri && !name) return null;
+    const slugBase = name ? toSlug(name) : "unknown";
     if (uri?.startsWith("spotify:track:")) {
-      const id = uri.replace("spotify:track:", "").toLowerCase();
-      trackRegistry.getOrAssign(uri, id); // register so dedup works
-      return id;
+      return trackRegistry.getOrAssign(uri, slugBase);
     }
     if (!name) return null;
     const trackNorm = name.toLowerCase().trim();
     const artistNorm = (record.master_metadata_album_artist_name ?? "").toLowerCase().trim();
     const albumNorm = (record.master_metadata_album_album_name ?? "").toLowerCase().trim();
-    return trackRegistry.getOrAssign(`${trackNorm}||${artistNorm}||${albumNorm}`, toSlug(name));
+    return trackRegistry.getOrAssign(`${trackNorm}||${artistNorm}||${albumNorm}`, slugBase);
   }
 
   const insert = db.prepare(`

@@ -20,9 +20,9 @@ describe("handleGetAlbums", () => {
     db.run(`INSERT INTO plays
       (dataset_id, ts, ms_played, content_type, track_name, artist_name, album_name, spotify_track_uri, album_slug, artist_slug, track_slug)
       VALUES
-      (1, '2024-01-01T10:00:00Z', 200000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa', 'album-1', 'artist-x', 'aaa'),
-      (1, '2024-01-02T10:00:00Z', 180000, 'track', 'Track B', 'Artist X', 'Album 1', 'spotify:track:bbb', 'album-1', 'artist-x', 'bbb'),
-      (1, '2024-01-03T10:00:00Z', 150000, 'track', 'Track C', 'Artist Y', 'Album 2', 'spotify:track:ccc', 'album-2', 'artist-y', 'ccc'),
+      (1, '2024-01-01T10:00:00Z', 200000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa', 'album-1', 'artist-x', 'track-a'),
+      (1, '2024-01-02T10:00:00Z', 180000, 'track', 'Track B', 'Artist X', 'Album 1', 'spotify:track:bbb', 'album-1', 'artist-x', 'track-b'),
+      (1, '2024-01-03T10:00:00Z', 150000, 'track', 'Track C', 'Artist Y', 'Album 2', 'spotify:track:ccc', 'album-2', 'artist-y', 'track-c'),
       (1, '2024-01-03T12:00:00Z', 10000,  'episode', 'Ep 1',   'Show Z',  null,      null,                null,      null,       null)`);
   });
 
@@ -56,7 +56,7 @@ describe("handleGetAlbums", () => {
     // insert second dataset
     db.run(`INSERT INTO datasets (name, created_at) VALUES ('Other', '2024-02-01')`);
     db.run(`INSERT INTO plays (dataset_id, ts, ms_played, content_type, track_name, artist_name, album_name, spotify_track_uri, album_slug, artist_slug, track_slug)
-      VALUES (2, '2024-02-01T10:00:00Z', 100000, 'track', 'X', 'Art Z', 'Album 3', 'spotify:track:zzz', 'album-3', 'art-z', 'zzz')`);
+      VALUES (2, '2024-02-01T10:00:00Z', 100000, 'track', 'X', 'Art Z', 'Album 3', 'spotify:track:zzz', 'album-3', 'art-z', 'track-z')`);
     const res = handleGetAlbums(db, makeReq("/api/albums?dataset_id=2"));
     const body = await res.json();
     expect(body.albums).toHaveLength(1);
@@ -112,8 +112,8 @@ describe("handleGetAlbum", () => {
     db.run(`INSERT INTO plays
       (dataset_id, ts, ms_played, content_type, track_name, artist_name, album_name, spotify_track_uri, album_slug, artist_slug, track_slug)
       VALUES
-      (1, '2024-01-01T10:00:00Z', 200000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa', 'album-1', 'artist-x', 'aaa'),
-      (1, '2024-01-02T10:00:00Z', 180000, 'track', 'Track B', 'Artist X', 'Album 1', 'spotify:track:bbb', 'album-1', 'artist-x', 'bbb')`);
+      (1, '2024-01-01T10:00:00Z', 200000, 'track', 'Track A', 'Artist X', 'Album 1', 'spotify:track:aaa', 'album-1', 'artist-x', 'track-a'),
+      (1, '2024-01-02T10:00:00Z', 180000, 'track', 'Track B', 'Artist X', 'Album 1', 'spotify:track:bbb', 'album-1', 'artist-x', 'track-b')`);
   });
 
   afterEach(() => db.close());

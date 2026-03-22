@@ -85,7 +85,7 @@ describe("AlbumDetail", () => {
 
   it("shows tracks section with track list", async () => {
     const mockTrack = {
-      track_slug: "aaa",
+      track_slug: "song-one",
       track_name: "Song One",
       artist_name: "Wolfs",
       artist_slug: "wolfs",
@@ -111,7 +111,7 @@ describe("AlbumDetail", () => {
 
   it("track link has correct href", async () => {
     const mockTrack = {
-      track_slug: "aaa",
+      track_slug: "song-one",
       track_name: "Song One",
       artist_name: "Wolfs",
       artist_slug: "wolfs",
@@ -134,6 +134,6 @@ describe("AlbumDetail", () => {
     renderDetail();
     await waitFor(() => screen.getByRole("link", { name: /Song One/ }));
     const link = screen.getByRole("link", { name: /Song One/ });
-    expect(link.getAttribute("href")).toBe(`/tracks/aaa`);
+    expect(link.getAttribute("href")).toBe(`/tracks/song-one`);
   });
 });

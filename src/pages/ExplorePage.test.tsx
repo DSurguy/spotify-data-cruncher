@@ -6,7 +6,7 @@ import { ExplorePage } from "./ExplorePage";
 import type { GetTracksResponse } from "@/types/api";
 
 const sampleTrack = {
-  track_slug: "aaa",
+  track_slug: "fake-plastic-trees",
   track_name: "Fake Plastic Trees",
   artist_name: "Radiohead",
   artist_slug: "radiohead",
@@ -69,7 +69,7 @@ describe("ExplorePage", () => {
     renderPage();
     await waitFor(() => screen.getByRole("link", { name: /Fake Plastic Trees/ }));
     const link = screen.getByRole("link", { name: /Fake Plastic Trees/ });
-    expect(link.getAttribute("href")).toBe(`/tracks/aaa`);
+    expect(link.getAttribute("href")).toBe(`/tracks/fake-plastic-trees`);
   });
 
   it("toggling artist group re-fetches with large page_size", async () => {

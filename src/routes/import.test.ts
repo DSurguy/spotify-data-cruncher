@@ -57,7 +57,7 @@ describe("importRecords", () => {
     expect(row.track_name).toBe("Song A");
     expect(row.artist_name).toBe("Artist X");
     expect(row.content_type).toBe("track");
-    expect(row.track_slug).toBe("abc123");
+    expect(row.track_slug).toBe("song-a");
     expect(row.artist_slug).toBe("artist-x");
     expect(row.album_slug).toBe("album-y");
   });

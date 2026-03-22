@@ -5,7 +5,7 @@ import { memoryLocation } from "wouter/memory-location";
 import { TrackDetail } from "./TrackDetail";
 import type { GetTrackResponse } from "@/types/api";
 
-const TRACK_SLUG = "abc";
+const TRACK_SLUG = "paranoid-android";
 
 const mockTrackResponse: GetTrackResponse = {
   track: {
