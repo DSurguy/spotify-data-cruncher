@@ -1,8 +1,7 @@
 import { Database } from "bun:sqlite";
 import * as migration001 from "../migrations/001_initial_schema";
-import * as migration002 from "../migrations/002_add_slugs";
 
-const migrations = [migration001, migration002];
+const migrations = [migration001];
 
 export function runMigrations(db: Database): void {
   // Ensure schema_version exists before we can query it

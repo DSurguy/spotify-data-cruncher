@@ -51,7 +51,11 @@ export function up(db: Database): void {
       skipped          INTEGER,
       offline          INTEGER,
       offline_timestamp INTEGER,
-      incognito_mode   INTEGER
+      incognito_mode   INTEGER,
+
+      album_slug  TEXT,
+      artist_slug TEXT,
+      track_slug  TEXT
     )
   `);
 
@@ -59,6 +63,9 @@ export function up(db: Database): void {
   db.run(`CREATE INDEX plays_track_uri ON plays(spotify_track_uri)`);
   db.run(`CREATE INDEX plays_dataset ON plays(dataset_id)`);
   db.run(`CREATE INDEX plays_content_type ON plays(content_type)`);
+  db.run(`CREATE INDEX plays_album_slug ON plays(album_slug)`);
+  db.run(`CREATE INDEX plays_artist_slug ON plays(artist_slug)`);
+  db.run(`CREATE INDEX plays_track_slug ON plays(track_slug)`);
 
   db.run(`
     CREATE TABLE metadata_overrides (
